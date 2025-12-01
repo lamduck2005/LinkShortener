@@ -81,7 +81,6 @@ public class SnippetController {
     }
 
 
-    // --- API 3: MỞ KHÓA (Dùng /api/v1) ---
     @PostMapping("/api/v1/unlock")
     public ResponseEntity<SnippetContentResponse> unlockSnippet(@Valid @RequestBody UnlockSnippetRequest request) {
 

@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-interface ClickAnalyticsRepository extends JpaRepository<ClickAnalytics, Long> {
+public interface ClickAnalyticsRepository extends JpaRepository<ClickAnalytics, Long> {
 }
