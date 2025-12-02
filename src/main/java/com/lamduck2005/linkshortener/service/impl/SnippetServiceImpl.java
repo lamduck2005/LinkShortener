@@ -2,25 +2,34 @@ package com.lamduck2005.linkshortener.service.impl;
 
 import com.lamduck2005.linkshortener.dto.request.CreateSnippetRequest;
 import com.lamduck2005.linkshortener.dto.response.CreateSnippetResponse;
+import com.lamduck2005.linkshortener.dto.response.MySnippetResponse;
+import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.dto.response.SnippetContentResponse;
 import com.lamduck2005.linkshortener.entity.ContentType;
 import com.lamduck2005.linkshortener.entity.Snippet;
+import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.mapper.SnippetMapper;
+import com.lamduck2005.linkshortener.repository.ClickAnalyticsRepository;
 import com.lamduck2005.linkshortener.repository.SnippetRepository;
 import com.lamduck2005.linkshortener.service.AnalyticsService;
 import com.lamduck2005.linkshortener.service.Base62Service;
 import com.lamduck2005.linkshortener.service.QrCodeService;
 import com.lamduck2005.linkshortener.service.SnippetService;
+import com.lamduck2005.linkshortener.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -29,12 +38,14 @@ import java.util.regex.Pattern;
 public class SnippetServiceImpl implements SnippetService {
 
     private final SnippetRepository snippetRepository;
+    private final ClickAnalyticsRepository clickAnalyticsRepository;
     private final Base62Service base62Service;
     private final SnippetMapper snippetMapper;
     private final PasswordEncoder passwordEncoder;
     private final QrCodeService qrCodeService;
     private final AnalyticsService analyticsService;
     private final HttpServletRequest httpRequest;
+    private final UserService userService;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -117,6 +128,12 @@ public class SnippetServiceImpl implements SnippetService {
         Snippet newSnippet = snippetMapper.toEntity(request);
         newSnippet.setContentData(content);
 
+        // Nếu request có JWT (user đã login) -> gán user hiện tại cho snippet
+        User currentUser = userService.getCurrentUserOrNull();
+        if (currentUser != null) {
+            newSnippet.setUser(currentUser);
+        }
+
         //hash pass
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             String hashedPassword = passwordEncoder.encode(request.getPassword());
@@ -151,6 +168,90 @@ public class SnippetServiceImpl implements SnippetService {
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<MySnippetResponse> getMySnippets(Pageable pageable) {
+        User currentUser = userService.getCurrentUser();
+
+        Page<Snippet> page = snippetRepository.findAllByUser(currentUser, pageable);
+
+        List<MySnippetResponse> content = page.map(snippet -> {
+            long clickCount = clickAnalyticsRepository.countBySnippetId(snippet.getId());
+            String shortUrl = baseUrl + "/" + snippet.getShortCode();
+            boolean hasPassword = snippet.getPasswordHash() != null && !snippet.getPasswordHash().isBlank();
+            return new MySnippetResponse(
+                    snippet.getId(),
+                    snippet.getShortCode(),
+                    shortUrl,
+                    snippet.getContentData(),
+                    clickCount,
+                    snippet.getCreatedAt(),
+                    snippet.getExpiresAt(),
+                    hasPassword,
+                    snippet.getContentType().name()
+            );
+        }).getContent();
+
+        return new PagedResponse<>(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
+    }
+
+    @Override
+    @Transactional
+    public void deleteMySnippet(Long id) {
+        User currentUser = userService.getCurrentUser();
+
+        Snippet snippet = snippetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Snippet không tồn tại."));
+
+        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
+            throw new AccessDeniedException("Bạn không có quyền xóa link của người khác.");
+        }
+
+        snippetRepository.delete(snippet);
+    }
+
+    @Override
+    @Transactional
+    public void updateSnippetPassword(Long id, String newPassword) {
+        User currentUser = userService.getCurrentUser();
+
+        Snippet snippet = snippetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Snippet không tồn tại."));
+
+        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
+            throw new AccessDeniedException("Bạn không có quyền sửa mật khẩu của link này.");
+        }
+
+        if (newPassword == null || newPassword.isBlank()) {
+            snippet.setPasswordHash(null);
+        } else {
+            snippet.setPasswordHash(passwordEncoder.encode(newPassword));
+        }
+
+        snippetRepository.save(snippet);
+    }
+
+    @Override
+    @Transactional
+    public void updateSnippetExpiry(Long id, Instant newExpiresAt) {
+        User currentUser = userService.getCurrentUser();
+
+        Snippet snippet = snippetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Snippet không tồn tại."));
+
+        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
+            throw new AccessDeniedException("Bạn không có quyền sửa ngày hết hạn của link này.");
+        }
+
+        snippet.setExpiresAt(newExpiresAt);
+        snippetRepository.save(snippet);
+    }
 
     private void logSnippetClick(Snippet snippet) {
         String ipAddress = httpRequest.getHeader("X-Forwarded-For");

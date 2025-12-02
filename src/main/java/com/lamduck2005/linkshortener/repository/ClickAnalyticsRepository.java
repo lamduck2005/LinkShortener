@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ClickAnalyticsRepository extends JpaRepository<ClickAnalytics, Long> {
+
+    long countBySnippetId(Long snippetId);
 }

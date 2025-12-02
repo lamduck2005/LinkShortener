@@ -20,7 +20,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 // .allowedOrigins("http://localhost:5173", "https://ten-mien-cua-ban.com")
 
                 // Cho phép các phương thức này
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
 
                 // Cho phép tất cả các header
                 .allowedHeaders("*");

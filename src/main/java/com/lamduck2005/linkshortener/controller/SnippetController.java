@@ -2,13 +2,23 @@ package com.lamduck2005.linkshortener.controller;
 
 import com.lamduck2005.linkshortener.dto.request.CreateSnippetRequest;
 import com.lamduck2005.linkshortener.dto.request.UnlockSnippetRequest;
+import com.lamduck2005.linkshortener.dto.request.UpdateSnippetExpiryRequest;
+import com.lamduck2005.linkshortener.dto.request.UpdateSnippetPasswordRequest;
 import com.lamduck2005.linkshortener.dto.response.CreateSnippetResponse;
+import com.lamduck2005.linkshortener.dto.response.MySnippetResponse;
+import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.dto.response.SnippetContentResponse;
 import com.lamduck2005.linkshortener.entity.ContentType;
 import com.lamduck2005.linkshortener.service.SnippetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -70,6 +80,16 @@ public class SnippetController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @GetMapping("/api/v1/snippets/me")
+    public ResponseEntity<PagedResponse<MySnippetResponse>> getMySnippets(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        PagedResponse<MySnippetResponse> snippets = snippetService.getMySnippets(pageable);
+        return ResponseEntity.ok(snippets);
+    }
+
     @GetMapping("/api/v1/snippets/{shortCode}")
     public ResponseEntity<SnippetContentResponse> getSnippetStatus(@PathVariable String shortCode) {
 
@@ -80,6 +100,30 @@ public class SnippetController {
         return ResponseEntity.ok(response);
     }
 
+
+    @DeleteMapping("/api/v1/snippets/{id}")
+    public ResponseEntity<Void> deleteMySnippet(@PathVariable Long id) {
+        snippetService.deleteMySnippet(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/api/v1/snippets/{id}/password")
+    public ResponseEntity<Void> updateSnippetPassword(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateSnippetPasswordRequest request
+    ) {
+        snippetService.updateSnippetPassword(id, request.getNewPassword());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/api/v1/snippets/{id}/expires-at")
+    public ResponseEntity<Void> updateSnippetExpiry(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateSnippetExpiryRequest request
+    ) {
+        snippetService.updateSnippetExpiry(id, request.getNewExpiresAt());
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping("/api/v1/unlock")
     public ResponseEntity<SnippetContentResponse> unlockSnippet(@Valid @RequestBody UnlockSnippetRequest request) {

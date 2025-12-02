@@ -19,15 +19,16 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Tương ứng với SERIAL
     private Integer id; // SERIAL là INT 32-bit
 
-    @Column(length = 50, nullable = false, unique = true)
-    private String name;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false, unique = true)
+    private ERole name;
 
     // Thêm mối quan hệ ngược lại với User (không bắt buộc, nhưng tiện để truy vấn)
     // 'mappedBy' trỏ đến tên trường 'roles' trong class User
     @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
     private Set<User> users = new HashSet<>();
 
-    public Role(String name) {
+    public Role(ERole name) {
         this.name = name;
     }
 
