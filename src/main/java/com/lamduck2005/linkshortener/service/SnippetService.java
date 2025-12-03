@@ -6,7 +6,6 @@ import com.lamduck2005.linkshortener.dto.response.MySnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.dto.response.SnippetContentResponse;
 
-import java.util.List;
 
 import org.springframework.data.domain.Pageable;
 

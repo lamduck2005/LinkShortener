@@ -3,7 +3,6 @@ package com.lamduck2005.linkshortener.dto.request;
 import com.lamduck2005.linkshortener.entity.ContentType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.time.Instant;

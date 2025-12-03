@@ -5,14 +5,18 @@ import com.lamduck2005.linkshortener.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
-public interface SnippetRepository extends JpaRepository<Snippet, Long> {
+public interface SnippetRepository extends JpaRepository<Snippet, Long>, JpaSpecificationExecutor<Snippet> {
 
     Optional<Snippet> findByShortCode(String shortCode);
 
     Page<Snippet> findAllByUser(User user, Pageable pageable);
+
+    long countByCreatedAtBetween(Instant from, Instant to);
 }
