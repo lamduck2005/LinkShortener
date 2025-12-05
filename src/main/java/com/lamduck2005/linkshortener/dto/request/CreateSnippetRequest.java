@@ -3,6 +3,8 @@ package com.lamduck2005.linkshortener.dto.request;
 import com.lamduck2005.linkshortener.entity.ContentType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.time.Instant;
@@ -17,7 +19,11 @@ public class CreateSnippetRequest {
     private ContentType type;
 
     // Các trường tùy chọn
+    @Pattern(regexp = "^$|^[A-Za-z0-9_-]{6,20}$",
+            message = "Mã rút gọn tùy chỉnh chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới, độ dài 6-20, không có khoảng trắng.")
     private String customCode;  // Link tùy chỉnh (ví dụ: "su-kien-cua-toi")
+
+    @Size(max = 255, message = "Mật khẩu tối đa 255 ký tự")
     private String password;    // Mật khẩu (sẽ hash sau)
     private Instant expiresAt;   // Thời gian hết hạn (String, sẽ parse sang Instant trong Service)
 

@@ -64,7 +64,9 @@ public class AuthServiceImpl implements AuthService {
         @Transactional
         public ResponseEntity<?> signup(SignupRequest request) {
 
-                userRepository.findByUsername(request.getUsername())
+                String normalizedUsername = request.getUsername().toLowerCase();
+
+                userRepository.findByUsernameIgnoreCase(normalizedUsername)
                                 .ifPresent(user -> {
                                         throw new IllegalArgumentException("Username đã được sử dụng.");
                                 });
@@ -76,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
 
                 User user = new User(
                                 request.getEmail(),
-                                request.getUsername(),
+                                normalizedUsername,
                                 passwordEncoder.encode(request.getPassword()));
                 user.setIsActive(true);
 

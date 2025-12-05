@@ -11,6 +11,7 @@ public class AdminUpdateUserRequest {
     private String username;
 
     @Email(message = "Email không hợp lệ")
+    @Size(max = 255, message = "Email tối đa 255 ký tự")
     private String email;
 
     private Boolean isActive;

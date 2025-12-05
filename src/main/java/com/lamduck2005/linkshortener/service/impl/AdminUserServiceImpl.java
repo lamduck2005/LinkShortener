@@ -61,7 +61,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional
     public AdminUserResponse createUser(AdminCreateUserRequest request) {
-        userRepository.findByUsername(request.getUsername())
+        String normalizedUsername = request.getUsername().toLowerCase();
+
+        userRepository.findByUsernameIgnoreCase(normalizedUsername)
                 .ifPresent(user -> {
                     throw new IllegalArgumentException("Username đã được sử dụng.");
                 });
@@ -73,7 +75,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         User user = new User(
                 request.getEmail(),
-                request.getUsername(),
+                normalizedUsername,
                 request.getPassword() // password đã được hash trước khi lưu, nếu cần có thể encode ở layer khác
         );
         user.setIsActive(request.getIsActive() == null ? Boolean.TRUE : request.getIsActive());
@@ -131,13 +133,14 @@ public class AdminUserServiceImpl implements AdminUserService {
         DefaultUserInitializer.throwIfTestAccount(user.getUsername(), "chỉnh sửa");
 
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
-            userRepository.findByUsername(request.getUsername())
+            String normalizedUsername = request.getUsername().toLowerCase();
+            userRepository.findByUsernameIgnoreCase(normalizedUsername)
                     .ifPresent(u -> {
                         if (!u.getId().equals(user.getId())) {
                             throw new IllegalArgumentException("Username đã được sử dụng.");
                         }
                     });
-            user.setUsername(request.getUsername());
+            user.setUsername(normalizedUsername);
         }
 
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {

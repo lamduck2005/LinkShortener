@@ -59,6 +59,9 @@ public class SnippetServiceImpl implements SnippetService {
     private static final Pattern URL_REGEX =
             Pattern.compile("^(https?://)?[\\w\\-]{1,}(\\.[\\w\\-]{1,}){1,}[\\w\\-.,@?^=%&:/~+#]*$");
 
+    // Chỉ cho phép chữ, số, gạch ngang, gạch dưới; độ dài 6-20; không khoảng trắng
+    private static final Pattern CUSTOM_CODE_REGEX = Pattern.compile("^[A-Za-z0-9_-]{6,20}$");
+
     @Override
     @Transactional
     public SnippetContentResponse getSnippetContent(String shortCode, String rawPassword) {
@@ -128,6 +131,21 @@ public class SnippetServiceImpl implements SnippetService {
         Snippet newSnippet = snippetMapper.toEntity(request);
         newSnippet.setContentData(content);
 
+        // Validate custom code (nếu có)
+        String customCode = request.getCustomCode();
+        if (customCode != null) {
+            customCode = customCode.trim();
+            if (customCode.isEmpty()) {
+                customCode = null;
+            } else {
+                if (!CUSTOM_CODE_REGEX.matcher(customCode).matches()) {
+                    throw new IllegalArgumentException("Mã rút gọn tùy chỉnh chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới, độ dài 6-20, không có khoảng trắng.");
+                }
+            }
+        }
+        // Gán lại shortCode đã được trim/validate
+        newSnippet.setShortCode(customCode);
+
         // Nếu request có JWT (user đã login) -> gán user hiện tại cho snippet
         User currentUser = userService.getCurrentUserOrNull();
         if (currentUser != null) {
@@ -141,19 +159,24 @@ public class SnippetServiceImpl implements SnippetService {
         }
 
         //lưu khi có custom code
-        if (request.getCustomCode() != null && !request.getCustomCode().isBlank()) {
+        if (customCode != null && !customCode.isBlank()) {
             try {
                 newSnippet = snippetRepository.save(newSnippet); // Chỉ 1 chuyến đi DB
             } catch (DataIntegrityViolationException e) {
-                throw new IllegalArgumentException("Mã rút gọn '" + request.getCustomCode() + "' đã được sử dụng!");
+                throw new IllegalArgumentException("Mã rút gọn '" + customCode + "' đã được sử dụng!");
             }
         } else {
-            //lưu với shortcode null
+            // lưu với shortcode null
             Snippet savedInitial = snippetRepository.save(newSnippet);
 
-            //gán shortcode đã tạo rồi lưu lại lần 2
+            // gán shortcode đã tạo từ id và lưu lại lần 2
             savedInitial.setShortCode(base62Service.encode(savedInitial.getId()));
-            newSnippet = snippetRepository.save(savedInitial);
+            try {
+                newSnippet = snippetRepository.save(savedInitial);
+            } catch (DataIntegrityViolationException e) {
+                // Trường hợp hiếm: shortCode base62(id) trùng với custom code đã tồn tại
+                throw new IllegalArgumentException("Không thể tạo mã rút gọn do bị trùng lặp. Vui lòng thử lại.");
+            }
         }
 
         //tạo response

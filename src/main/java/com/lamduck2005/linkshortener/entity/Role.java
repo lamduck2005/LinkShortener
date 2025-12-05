@@ -20,7 +20,7 @@ public class Role {
     private Integer id; // SERIAL là INT 32-bit
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20, nullable = false, unique = true)
+    @Column(length = 50, nullable = false, unique = true) // schema: varchar(50)
     private ERole name;
 
     // Thêm mối quan hệ ngược lại với User (không bắt buộc, nhưng tiện để truy vấn)

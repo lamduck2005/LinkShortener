@@ -10,6 +10,7 @@ public class SignupRequest {
 
     @NotBlank
     @Email
+    @Size(max = 255, message = "Email tối đa 255 ký tự")
     private String email;
 
     @NotBlank
@@ -17,6 +18,6 @@ public class SignupRequest {
     private String username;
 
     @NotBlank
-    @Size(min = 6, max = 100)
+    @Size(min = 6, max = 255)
     private String password;
 }

@@ -21,7 +21,7 @@ public class Snippet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "short_code", nullable = false, unique = true, length = 20)
+    @Column(name = "short_code", unique = true, length = 20) // schema cho phép NULL
     private String shortCode;
 
     @Enumerated(EnumType.STRING) // <-- BÁO JPA LƯU DẠNG STRING

@@ -23,7 +23,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
+        // Cho phép đăng nhập không phân biệt hoa/thường
+        User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy user: " + username));
 
         List<SimpleGrantedAuthority> authorities = user.getRoles().stream()

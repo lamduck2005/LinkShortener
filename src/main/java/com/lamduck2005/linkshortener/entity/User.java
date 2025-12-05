@@ -22,24 +22,24 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Tương ứng với BIGSERIAL
     private Long id; // BIGSERIAL là BIGINT 64-bit
 
-    @Column(nullable = false, unique = true, length = 255) // Nên giới hạn độ dài email
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false, unique = true, length = 100) // Nên giới hạn độ dài username
+    @Column(nullable = false, unique = true, length = 100) // schema: varchar(100)
     private String username;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash", nullable = false, length = 255) // schema: varchar(255)
     private String passwordHash;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = false;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false) 
     private Instant createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at") 
     private Instant updatedAt;
 
     // Mối quan hệ Nhiều-Nhiều với Role
