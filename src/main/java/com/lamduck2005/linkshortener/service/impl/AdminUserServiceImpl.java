@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.service.impl;
 
+import com.lamduck2005.linkshortener.config.DefaultUserInitializer;
 import com.lamduck2005.linkshortener.dto.request.AdminCreateUserRequest;
 import com.lamduck2005.linkshortener.dto.request.AdminUpdateUserRequest;
 import com.lamduck2005.linkshortener.dto.response.AdminUserResponse;
@@ -125,6 +126,9 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User không tồn tại."));
+
+        // Bảo vệ 2 tài khoản test: admin và user (không thể sửa bất kỳ thông tin nào)
+        DefaultUserInitializer.throwIfTestAccount(user.getUsername(), "chỉnh sửa");
 
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
             userRepository.findByUsername(request.getUsername())

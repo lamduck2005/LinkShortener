@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.service.impl;
 
+import com.lamduck2005.linkshortener.config.DefaultUserInitializer;
 import com.lamduck2005.linkshortener.dto.request.ChangeEmailRequest;
 import com.lamduck2005.linkshortener.dto.request.ChangePasswordRequest;
 import com.lamduck2005.linkshortener.dto.response.UserProfileResponse;
@@ -89,6 +90,9 @@ public class UserServiceImpl implements UserService {
             throw new BadCredentialsException("Mật khẩu hiện tại không chính xác.");
         }
 
+        // Bảo vệ 2 tài khoản test: admin và user (không thể đổi password)
+        DefaultUserInitializer.throwIfTestAccount(currentUser.getUsername(), "đổi mật khẩu");
+
         currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(currentUser);
     }
@@ -97,6 +101,9 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void changeEmail(ChangeEmailRequest request) {
         User currentUser = getCurrentUser();
+
+        // Bảo vệ 2 tài khoản test: admin và user (không thể đổi email)
+        DefaultUserInitializer.throwIfTestAccount(currentUser.getUsername(), "đổi email");
 
         userRepository.findByEmail(request.getNewEmail())
                 .ifPresent(user -> {
