@@ -1,6 +1,8 @@
 package com.lamduck2005.linkshortener.config;
 
 import com.lamduck2005.linkshortener.config.jwt.AuthTokenFilter;
+import com.lamduck2005.linkshortener.config.security.RestAccessDeniedHandler;
+import com.lamduck2005.linkshortener.config.security.RestAuthenticationEntryPoint;
 import com.lamduck2005.linkshortener.service.impl.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +29,8 @@ public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthTokenFilter authTokenFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -53,10 +57,15 @@ public class SecurityConfig {
                 .cors(cors -> {
                 })
                 .anonymous(AbstractHttpConfigurer::disable)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint) // Khi không đăng nhập hoặc token hết hạn, trả về 401
+                        .accessDeniedHandler(accessDeniedHandler) // Khi không có quyền truy cập, trả về 403
+                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers(
+                                "/health",
                                 "/api/v1/auth/**",
                                 "/api/v1/snippets",
                                 "/api/v1/unlock",
