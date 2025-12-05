@@ -59,7 +59,7 @@ public class UserServiceImpl implements UserService {
     public User getCurrentUserOrNull() {
         try {
             return getCurrentUser();
-        } catch (AccessDeniedException ex) {
+        } catch (InsufficientAuthenticationException | AccessDeniedException ex) {
             return null;
         }
     }
