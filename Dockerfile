@@ -2,9 +2,12 @@
 FROM maven:3.8.5-openjdk-17 AS build
 
 WORKDIR /app
+# Copy pom.xml trước để tận dụng Docker layer caching
+# Nếu pom.xml không đổi, layer này sẽ được cache
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Copy source code
 COPY src ./src
+# Build JAR (Maven sẽ tự động tải dependencies nếu cần)
 RUN mvn clean package -DskipTests
 
 #run stage
