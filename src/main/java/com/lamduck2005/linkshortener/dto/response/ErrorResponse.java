@@ -14,7 +14,6 @@ public class ErrorResponse {
     private String message;
     private String path;
 
-    // Constructor tiện lợi
     public ErrorResponse(int status, String error, String message, String path) {
         this.timestamp = Instant.now();
         this.status = status;
