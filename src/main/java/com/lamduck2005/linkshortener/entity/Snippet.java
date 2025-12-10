@@ -21,8 +21,8 @@ public class Snippet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "short_code", unique = true, length = 20) // schema cho phép NULL
-    private String shortCode;
+    @Column(name = "custom_alias", unique = true, length = 100)
+    private String customAlias;
 
     @Enumerated(EnumType.STRING) // <-- BÁO JPA LƯU DẠNG STRING
     @Column(name = "content_type", nullable = false, length = 10)
@@ -52,8 +52,8 @@ public class Snippet {
     private Set<ClickAnalytics> clicks = new HashSet<>();
 
 
-    public Snippet(String shortCode, ContentType contentType, String contentData, User user) {
-        this.shortCode = shortCode;
+    public Snippet(String customAlias, ContentType contentType, String contentData, User user) {
+        this.customAlias = customAlias;
         this.contentType = contentType;
         this.contentData = contentData;
         this.user = user; // Có thể null nếu là snippet công khai

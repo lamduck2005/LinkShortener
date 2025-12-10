@@ -14,7 +14,7 @@ import java.util.Optional;
 @Repository
 public interface SnippetRepository extends JpaRepository<Snippet, Long>, JpaSpecificationExecutor<Snippet> {
 
-    Optional<Snippet> findByShortCode(String shortCode);
+    Optional<Snippet> findByCustomAlias(String customAlias);
 
     Page<Snippet> findAllByUser(User user, Pageable pageable);
 

@@ -43,7 +43,7 @@ public class User {
     private Instant updatedAt;
 
     // Mối quan hệ Nhiều-Nhiều với Role
-    @ManyToMany(fetch = FetchType.EAGER) // Load Role cùng User
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),

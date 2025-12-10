@@ -4,15 +4,15 @@ import com.lamduck2005.linkshortener.config.jwt.JwtUtils;
 import com.lamduck2005.linkshortener.dto.request.LoginRequest;
 import com.lamduck2005.linkshortener.dto.request.SignupRequest;
 import com.lamduck2005.linkshortener.dto.response.JwtResponse;
+import com.lamduck2005.linkshortener.dto.response.SignupResponse;
 import com.lamduck2005.linkshortener.entity.ERole;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
+import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
 import com.lamduck2005.linkshortener.repository.RoleRepository;
 import com.lamduck2005.linkshortener.repository.UserRepository;
 import com.lamduck2005.linkshortener.service.AuthService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -62,18 +62,18 @@ public class AuthServiceImpl implements AuthService {
 
         @Override
         @Transactional
-        public ResponseEntity<?> signup(SignupRequest request) {
+        public SignupResponse signup(SignupRequest request) {
 
                 String normalizedUsername = request.getUsername().toLowerCase();
 
                 userRepository.findByUsernameIgnoreCase(normalizedUsername)
                                 .ifPresent(user -> {
-                                        throw new IllegalArgumentException("Username đã được sử dụng.");
+                                        throw new DuplicateResourceException("Username đã được sử dụng.");
                                 });
 
                 userRepository.findByEmail(request.getEmail())
                                 .ifPresent(user -> {
-                                        throw new IllegalArgumentException("Email đã được sử dụng.");
+                                        throw new DuplicateResourceException("Email đã được sử dụng.");
                                 });
 
                 User user = new User(
@@ -87,8 +87,8 @@ public class AuthServiceImpl implements AuthService {
                                                 "ROLE_USER chưa được cấu hình trong hệ thống."));
 
                 user.setRoles(Collections.singleton(userRole));
-                userRepository.save(user);
+                User savedUser = userRepository.save(user);
 
-                return ResponseEntity.status(HttpStatus.CREATED).build();
+                return new SignupResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail());
         }
 }

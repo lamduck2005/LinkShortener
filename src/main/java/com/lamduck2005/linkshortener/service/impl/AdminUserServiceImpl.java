@@ -8,6 +8,8 @@ import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.entity.ERole;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
+import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
+import com.lamduck2005.linkshortener.exception.ResourceNotFoundException;
 import com.lamduck2005.linkshortener.mapper.UserMapper;
 import com.lamduck2005.linkshortener.repository.RoleRepository;
 import com.lamduck2005.linkshortener.repository.UserRepository;
@@ -65,12 +67,12 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         userRepository.findByUsernameIgnoreCase(normalizedUsername)
                 .ifPresent(user -> {
-                    throw new IllegalArgumentException("Username đã được sử dụng.");
+                    throw new DuplicateResourceException("Username đã được sử dụng.");
                 });
 
         userRepository.findByEmail(request.getEmail())
                 .ifPresent(user -> {
-                    throw new IllegalArgumentException("Email đã được sử dụng.");
+                    throw new DuplicateResourceException("Email đã được sử dụng.");
                 });
 
         User user = new User(
@@ -127,7 +129,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User không tồn tại."));
+                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại."));
 
         // Bảo vệ 2 tài khoản test: admin và user (không thể sửa bất kỳ thông tin nào)
         DefaultUserInitializer.throwIfTestAccount(user.getUsername(), "chỉnh sửa");
@@ -137,7 +139,7 @@ public class AdminUserServiceImpl implements AdminUserService {
             userRepository.findByUsernameIgnoreCase(normalizedUsername)
                     .ifPresent(u -> {
                         if (!u.getId().equals(user.getId())) {
-                            throw new IllegalArgumentException("Username đã được sử dụng.");
+                            throw new DuplicateResourceException("Username đã được sử dụng.");
                         }
                     });
             user.setUsername(normalizedUsername);
@@ -147,7 +149,7 @@ public class AdminUserServiceImpl implements AdminUserService {
             userRepository.findByEmail(request.getEmail())
                     .ifPresent(u -> {
                         if (!u.getId().equals(user.getId())) {
-                            throw new IllegalArgumentException("Email đã được sử dụng.");
+                            throw new DuplicateResourceException("Email đã được sử dụng.");
                         }
                     });
             user.setEmail(request.getEmail());

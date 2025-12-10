@@ -31,7 +31,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             ClickAnalytics analytics = new ClickAnalytics(snippet, ipAddress, userAgent);
             clickAnalyticsRepository.save(analytics);
         } catch (Exception e) {
-            log.error("Không thể ghi log click cho snippet {}: {}", snippet.getShortCode(), e.getMessage());
+            log.error("Không thể ghi log click cho snippet id={}: {}", snippet.getId(), e.getMessage());
         }
     }
 }

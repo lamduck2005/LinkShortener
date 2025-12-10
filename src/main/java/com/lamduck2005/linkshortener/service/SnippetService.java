@@ -5,14 +5,15 @@ import com.lamduck2005.linkshortener.dto.response.CreateSnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.MySnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.dto.response.SnippetContentResponse;
-
-
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 
 public interface SnippetService {
     CreateSnippetResponse createSnippet(CreateSnippetRequest createSnippetRequest);
 
     SnippetContentResponse getSnippetContent(String shortCode, String rawPassword);
+
+    ResponseEntity<?> handleSnippetRedirect(String shortCode);
 
     PagedResponse<MySnippetResponse> getMySnippets(Pageable pageable);
 

@@ -20,18 +20,37 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Xử lý lỗi khi mã tùy chỉnh (customCode) bị trùng.
-     */
+    @ExceptionHandler(DuplicateResourceException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDuplicateResourceException(DuplicateResourceException ex, WebRequest request) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        return new ErrorResponse(
+                status.value(),
+                status.getReasonPhrase(),
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", ""));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        return new ErrorResponse(
+                status.value(),
+                status.getReasonPhrase(),
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", ""));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.CONFLICT) // 1. Set Status Code 409
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
 
-        final HttpStatus status = HttpStatus.CONFLICT; // Định nghĩa status
+        final HttpStatus status = HttpStatus.BAD_REQUEST;
 
         return new ErrorResponse(
-                status.value(), // 409
-                status.getReasonPhrase(), // "Conflict" (Lấy tự động)
+                status.value(),
+                status.getReasonPhrase(),
                 ex.getMessage(),
                 request.getDescription(false).replace("uri=", ""));
     }
@@ -88,15 +107,15 @@ public class GlobalExceptionHandler {
      * Xử lý lỗi không có api //400
      */
     @ExceptionHandler(NoResourceFoundException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleNoResourceFoundException(NoResourceFoundException ex, WebRequest request) {
 
-        final HttpStatus status = HttpStatus.BAD_REQUEST;
+        final HttpStatus status = HttpStatus.NOT_FOUND;
 
         return new ErrorResponse(
-                status.value(), // 400
-                status.getReasonPhrase(), // "Bad Request" (Lấy tự động)
-                "Không tìm thấy tài nguyên! Kiểm tra lại đường dẫn API hoặc phương thức (GET, POST, ...)",
+                status.value(), // 404
+                status.getReasonPhrase(), // "Not Found" (Lấy tự động)
+                "Không tìm thấy tài nguyên! Kiểm tra lại đường dẫn API hoặc phương thức (GET, POST, ...).",
                 request.getDescription(false).replace("uri=", ""));
     }
 

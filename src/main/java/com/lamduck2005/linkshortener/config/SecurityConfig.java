@@ -37,6 +37,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    @SuppressWarnings("deprecation")
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -69,8 +70,7 @@ public class SecurityConfig {
                                 "/health",
                                 "/api/v1/auth/**",
                                 "/api/v1/snippets",
-                                "/api/v1/unlock",
-                                "/api/v1/snippets/{shortCode}",
+                                "/api/v1/snippets/**",
                                 "/{shortCode}",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",

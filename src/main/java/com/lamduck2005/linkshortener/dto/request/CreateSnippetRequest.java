@@ -18,10 +18,12 @@ public class CreateSnippetRequest {
     @NotNull(message = "Loại nội dung không được để trống")
     private ContentType type;
 
-    // Các trường tùy chọn
-    @Pattern(regexp = "^$|^[A-Za-z0-9_-]{6,20}$",
-            message = "Mã rút gọn tùy chỉnh chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới, độ dài 6-20, không có khoảng trắng.")
-    private String customCode;  // Link tùy chỉnh (ví dụ: "su-kien-cua-toi")
+    // Alias tùy chọn (cấm ký tự '~', chỉ cho a-zA-Z0-9_-)
+    @Pattern(
+            regexp = "^$|^[A-Za-z0-9_-]{1,100}$",
+            message = "Alias chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới, độ dài 1-100 ký tự, không có khoảng trắng, không chứa '~'."
+    )
+    private String customAlias;  // Link tùy chỉnh (ví dụ: "su-kien-cua-toi")
 
     @Size(max = 255, message = "Mật khẩu tối đa 255 ký tự")
     private String password;    // Mật khẩu (sẽ hash sau)

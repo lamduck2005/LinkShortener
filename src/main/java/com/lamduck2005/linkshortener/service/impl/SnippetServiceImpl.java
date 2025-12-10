@@ -8,6 +8,8 @@ import com.lamduck2005.linkshortener.dto.response.SnippetContentResponse;
 import com.lamduck2005.linkshortener.entity.ContentType;
 import com.lamduck2005.linkshortener.entity.Snippet;
 import com.lamduck2005.linkshortener.entity.User;
+import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
+import com.lamduck2005.linkshortener.exception.ResourceNotFoundException;
 import com.lamduck2005.linkshortener.mapper.SnippetMapper;
 import com.lamduck2005.linkshortener.repository.ClickAnalyticsRepository;
 import com.lamduck2005.linkshortener.repository.SnippetRepository;
@@ -16,6 +18,7 @@ import com.lamduck2005.linkshortener.service.Base62Service;
 import com.lamduck2005.linkshortener.service.QrCodeService;
 import com.lamduck2005.linkshortener.service.SnippetService;
 import com.lamduck2005.linkshortener.service.UserService;
+import com.lamduck2005.linkshortener.validator.SnippetValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,8 +33,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -46,9 +51,13 @@ public class SnippetServiceImpl implements SnippetService {
     private final AnalyticsService analyticsService;
     private final HttpServletRequest httpRequest;
     private final UserService userService;
+    private final SnippetValidator snippetValidator;
 
     @Value("${app.base-url}")
     private String baseUrl;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Value("${app.validation.url-max-length}")
     private int urlMaxLength;
@@ -56,18 +65,14 @@ public class SnippetServiceImpl implements SnippetService {
     @Value("${app.validation.text-max-length}")
     private int textMaxLength;
 
-    private static final Pattern URL_REGEX =
-            Pattern.compile("^(https?://)?[\\w\\-]{1,}(\\.[\\w\\-]{1,}){1,}[\\w\\-.,@?^=%&:/~+#]*$");
-
-    // Chỉ cho phép chữ, số, gạch ngang, gạch dưới; độ dài 6-20; không khoảng trắng
-    private static final Pattern CUSTOM_CODE_REGEX = Pattern.compile("^[A-Za-z0-9_-]{6,20}$");
+    @Value("${app.shortcode.prefix:~}")
+    private String shortCodePrefix;
 
     @Override
     @Transactional
     public SnippetContentResponse getSnippetContent(String shortCode, String rawPassword) {
 
-        // 1. Tìm Snippet
-        Optional<Snippet> snippetOptional = snippetRepository.findByShortCode(shortCode);
+        Optional<Snippet> snippetOptional = resolveSnippetByCode(shortCode);
         if (snippetOptional.isEmpty()) {
             return new SnippetContentResponse(SnippetContentResponse.Status.NOT_FOUND, null, null);
         }
@@ -104,47 +109,60 @@ public class SnippetServiceImpl implements SnippetService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> handleSnippetRedirect(String shortCode) {
+        SnippetContentResponse response = getSnippetContent(shortCode, null);
+
+        switch (response.getStatus()) {
+            case OK:
+                if (response.getContentType() == ContentType.URL) {
+                    return ResponseEntity.status(HttpStatus.FOUND)
+                            .header(HttpHeaders.LOCATION, response.getContent())
+                            .build();
+                }
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, "text/plain; charset=UTF-8")
+                        .body(response.getContent());
+
+            case PASSWORD_REQUIRED:
+                String passwordUrl = frontendUrl + "/unlock/" + shortCode;
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, passwordUrl)
+                        .build();
+
+            case EXPIRED:
+                String expiredUrl = frontendUrl + "/expired";
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, expiredUrl)
+                        .build();
+
+            case NOT_FOUND:
+            default:
+                String errorUrl = frontendUrl + "/not-found";
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, errorUrl)
+                        .build();
+        }
+    }
+
+    @Override
     @Transactional
     public CreateSnippetResponse createSnippet(CreateSnippetRequest request) {
-        //valid cơ bản
-        String content = request.getContent().trim();
-        if (request.getType() == ContentType.URL) {
-            // 1. Check URL hợp lệ
-            if (!URL_REGEX.matcher(content).matches()) {
-                throw new IllegalArgumentException("Nội dung không phải là một URL hợp lệ.");
-            }
-            // 2. Check độ dài URL
-            if (content.length() > urlMaxLength) {
-                throw new IllegalArgumentException("URL quá dài, tối đa " + urlMaxLength + " ký tự.");
-            }
-            if (!content.startsWith("http://") && !content.startsWith("https://")) {
-                content = "http://" + content;
-            }
-        } else if (request.getType() == ContentType.TEXT) {
-            // 3. Check độ dài TEXT
-            if (content.length() > textMaxLength) {
-                throw new IllegalArgumentException("Nội dung text quá dài, tối đa " + textMaxLength + " ký tự.");
-            }
-        }
+        // validate & normalize content
+        String content = snippetValidator.validateContent(
+                request.getContent(),
+                request.getType(),
+                urlMaxLength,
+                textMaxLength
+        );
 
-        //Tạo snippet mới, gán lại content đã validate
+        // Tạo snippet mới, gán lại content đã validate
         Snippet newSnippet = snippetMapper.toEntity(request);
         newSnippet.setContentData(content);
 
-        // Validate custom code (nếu có)
-        String customCode = request.getCustomCode();
-        if (customCode != null) {
-            customCode = customCode.trim();
-            if (customCode.isEmpty()) {
-                customCode = null;
-            } else {
-                if (!CUSTOM_CODE_REGEX.matcher(customCode).matches()) {
-                    throw new IllegalArgumentException("Mã rút gọn tùy chỉnh chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới, độ dài 6-20, không có khoảng trắng.");
-                }
-            }
-        }
-        // Gán lại shortCode đã được trim/validate
-        newSnippet.setShortCode(customCode);
+        // Validate custom alias (nếu có)
+        String customAlias = snippetValidator.validateCustomAlias(request.getCustomAlias());
+        newSnippet.setCustomAlias(customAlias);
 
         // Nếu request có JWT (user đã login) -> gán user hiện tại cho snippet
         User currentUser = userService.getCurrentUserOrNull();
@@ -158,32 +176,19 @@ public class SnippetServiceImpl implements SnippetService {
             newSnippet.setPasswordHash(hashedPassword);
         }
 
-        //lưu khi có custom code
-        if (customCode != null && !customCode.isBlank()) {
-            try {
-                newSnippet = snippetRepository.save(newSnippet); // Chỉ 1 chuyến đi DB
-            } catch (DataIntegrityViolationException e) {
-                throw new IllegalArgumentException("Mã rút gọn '" + customCode + "' đã được sử dụng!");
-            }
-        } else {
-            // lưu với shortcode null
-            Snippet savedInitial = snippetRepository.save(newSnippet);
-
-            // gán shortcode đã tạo từ id và lưu lại lần 2
-            savedInitial.setShortCode(base62Service.encode(savedInitial.getId()));
-            try {
-                newSnippet = snippetRepository.save(savedInitial);
-            } catch (DataIntegrityViolationException e) {
-                // Trường hợp hiếm: shortCode base62(id) trùng với custom code đã tồn tại
-                throw new IllegalArgumentException("Không thể tạo mã rút gọn do bị trùng lặp. Vui lòng thử lại.");
-            }
+        // lưu (chỉ 1 query), customAlias đã unique ở DB
+        try {
+            newSnippet = snippetRepository.save(newSnippet);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateResourceException("Alias đã được sử dụng.");
         }
 
         //tạo response
         CreateSnippetResponse response = snippetMapper.toResponse(newSnippet);
 
-        //tạo qr code và gán response
-        String shortUrl = baseUrl + "/" + newSnippet.getShortCode();
+        String displayCode = buildDisplayCode(newSnippet);
+        String shortUrl = baseUrl + "/" + displayCode;
+        response.setShortCode(displayCode);
         response.setShortUrl(shortUrl);
         response.setQrCode(qrCodeService.generateQrCodeBase64(shortUrl, 250, 250));
 
@@ -200,11 +205,12 @@ public class SnippetServiceImpl implements SnippetService {
 
         List<MySnippetResponse> content = page.map(snippet -> {
             long clickCount = clickAnalyticsRepository.countBySnippetId(snippet.getId());
-            String shortUrl = baseUrl + "/" + snippet.getShortCode();
+            String displayCode = buildDisplayCode(snippet);
+            String shortUrl = baseUrl + "/" + displayCode;
             boolean hasPassword = snippet.getPasswordHash() != null && !snippet.getPasswordHash().isBlank();
             return new MySnippetResponse(
                     snippet.getId(),
-                    snippet.getShortCode(),
+                    displayCode,
                     shortUrl,
                     snippet.getContentData(),
                     clickCount,
@@ -227,29 +233,14 @@ public class SnippetServiceImpl implements SnippetService {
     @Override
     @Transactional
     public void deleteMySnippet(Long id) {
-        User currentUser = userService.getCurrentUser();
-
-        Snippet snippet = snippetRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Snippet không tồn tại."));
-
-        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
-            throw new AccessDeniedException("Bạn không có quyền xóa link của người khác.");
-        }
-
+        Snippet snippet = validateSnippetOwnership(id, "Bạn không có quyền xóa snippet của người khác.");
         snippetRepository.delete(snippet);
     }
 
     @Override
     @Transactional
     public void updateSnippetPassword(Long id, String newPassword) {
-        User currentUser = userService.getCurrentUser();
-
-        Snippet snippet = snippetRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Snippet không tồn tại."));
-
-        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
-            throw new AccessDeniedException("Bạn không có quyền sửa mật khẩu của link này.");
-        }
+        Snippet snippet = validateSnippetOwnership(id, "Bạn không có quyền sửa mật khẩu của snippet này.");
 
         if (newPassword == null || newPassword.isBlank()) {
             snippet.setPasswordHash(null);
@@ -263,17 +254,46 @@ public class SnippetServiceImpl implements SnippetService {
     @Override
     @Transactional
     public void updateSnippetExpiry(Long id, Instant newExpiresAt) {
-        User currentUser = userService.getCurrentUser();
-
-        Snippet snippet = snippetRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Snippet không tồn tại."));
-
-        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
-            throw new AccessDeniedException("Bạn không có quyền sửa ngày hết hạn của link này.");
-        }
+        Snippet snippet = validateSnippetOwnership(id, "Bạn không có quyền sửa ngày hết hạn của snippet này.");
 
         snippet.setExpiresAt(newExpiresAt);
         snippetRepository.save(snippet);
+    }
+
+    private Snippet validateSnippetOwnership(Long snippetId, String errorMessage) {
+        User currentUser = userService.getCurrentUser();
+
+        Snippet snippet = snippetRepository.findById(snippetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Snippet không tồn tại."));
+
+        if (snippet.getUser() == null || !currentUser.getId().equals(snippet.getUser().getId())) {
+            throw new AccessDeniedException(errorMessage);
+        }
+
+        return snippet;
+    }
+
+    private Optional<Snippet> resolveSnippetByCode(String code) {
+        if (code != null && !code.isBlank() && code.startsWith(shortCodePrefix)) {
+            String base62Part = code.substring(shortCodePrefix.length());
+            if (base62Part.isEmpty()) {
+                return Optional.empty();
+            }
+            try {
+                long id = base62Service.decode(base62Part);
+                return snippetRepository.findById(id);
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        }
+        return snippetRepository.findByCustomAlias(code);
+    }
+
+    private String buildDisplayCode(Snippet snippet) {
+        if (snippet.getCustomAlias() != null && !snippet.getCustomAlias().isBlank()) {
+            return snippet.getCustomAlias();
+        }
+        return shortCodePrefix + base62Service.encode(snippet.getId());
     }
 
     private void logSnippetClick(Snippet snippet) {

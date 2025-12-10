@@ -13,7 +13,7 @@ public interface SnippetMapper {
     // Tên field trong Entity là 'contentData'
     @Mapping(source = "content", target = "contentData")
     @Mapping(source = "type", target = "contentType")
-    @Mapping(source = "customCode", target = "shortCode")
+    @Mapping(source = "customAlias", target = "customAlias")
     Snippet toEntity(CreateSnippetRequest request);
 
 

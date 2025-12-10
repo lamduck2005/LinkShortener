@@ -6,6 +6,7 @@ import com.lamduck2005.linkshortener.dto.request.ChangePasswordRequest;
 import com.lamduck2005.linkshortener.dto.response.UserProfileResponse;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
+import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
 import com.lamduck2005.linkshortener.mapper.UserMapper;
 import com.lamduck2005.linkshortener.repository.UserRepository;
 import com.lamduck2005.linkshortener.service.UserService;
@@ -109,7 +110,7 @@ public class UserServiceImpl implements UserService {
                 .ifPresent(user -> {
                     // Nếu email đã thuộc về user khác
                     if (!user.getId().equals(currentUser.getId())) {
-                        throw new IllegalArgumentException("Email đã được sử dụng.");
+                        throw new DuplicateResourceException("Email đã được sử dụng.");
                     }
                 });
 

@@ -10,6 +10,7 @@ import com.lamduck2005.linkshortener.repository.ClickAnalyticsRepository;
 import com.lamduck2005.linkshortener.repository.SnippetRepository;
 import com.lamduck2005.linkshortener.repository.UserRepository;
 import com.lamduck2005.linkshortener.service.AdminDashboardService;
+import com.lamduck2005.linkshortener.service.Base62Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -29,9 +30,13 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final UserRepository userRepository;
     private final SnippetRepository snippetRepository;
     private final ClickAnalyticsRepository clickAnalyticsRepository;
+    private final Base62Service base62Service;
 
     @Value("${app.base-url}")
     private String baseUrl;
+
+    @Value("${app.shortcode.prefix:~}")
+    private String shortCodePrefix;
 
     @Override
     @Transactional(readOnly = true)
@@ -99,7 +104,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     }
 
     private AdminDashboardTopSnippetResponse mapToTopSnippetResponse(Snippet snippet, long clickCount) {
-        String shortUrl = baseUrl + "/" + snippet.getShortCode();
+        String displayCode = buildDisplayCode(snippet);
+        String shortUrl = baseUrl + "/" + displayCode;
 
         User owner = snippet.getUser();
         Long ownerId = owner != null ? owner.getId() : null;
@@ -109,7 +115,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
         return new AdminDashboardTopSnippetResponse(
                 snippet.getId(),
-                snippet.getShortCode(),
+                displayCode,
                 shortUrl,
                 snippet.getContentData(),
                 ownerId,
@@ -119,6 +125,13 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 snippet.getExpiresAt(),
                 isExpired
         );
+    }
+
+    private String buildDisplayCode(Snippet snippet) {
+        if (snippet.getCustomAlias() != null && !snippet.getCustomAlias().isBlank()) {
+            return snippet.getCustomAlias();
+        }
+        return shortCodePrefix + base62Service.encode(snippet.getId());
     }
 }
 
