@@ -2,7 +2,7 @@ package com.lamduck2005.linkshortener.controller.admin;
 
 import com.lamduck2005.linkshortener.dto.request.AdminCreateUserRequest;
 import com.lamduck2005.linkshortener.dto.request.AdminUpdateUserRequest;
-import com.lamduck2005.linkshortener.dto.response.AdminUserResponse;
+import com.lamduck2005.linkshortener.dto.response.UserResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.service.admin.AdminUserService;
 import jakarta.validation.Valid;
@@ -29,27 +29,27 @@ public class AdminUserController {
     private final AdminUserService userService;
 
     @GetMapping
-    public ResponseEntity<PagedResponse<AdminUserResponse>> getAllUsers(
+    public ResponseEntity<PagedResponse<UserResponse>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        PagedResponse<AdminUserResponse> response = userService.getAllUsers(pageable);
+        PagedResponse<UserResponse> response = userService.getAllUsers(pageable);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping
-    public ResponseEntity<AdminUserResponse> createUser(@Valid @RequestBody AdminCreateUserRequest request) {
-        AdminUserResponse created = userService.createUser(request);
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody AdminCreateUserRequest request) {
+        UserResponse created = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<AdminUserResponse> updateUser(
+    public ResponseEntity<UserResponse> updateUser(
             @PathVariable Long id,
             @Valid @RequestBody AdminUpdateUserRequest request
     ) {
-        AdminUserResponse updated = userService.updateUser(id, request);
+        UserResponse updated = userService.updateUser(id, request);
         return ResponseEntity.ok(updated);
     }
 }

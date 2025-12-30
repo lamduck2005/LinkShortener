@@ -60,7 +60,7 @@ public class AdminSnippetController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateSnippetExpiryRequest request
     ) {
-        snippetService.updateSnippetExpiry(id, request.getNewExpiresAt());
+        snippetService.updateSnippetExpiry(id, request.newExpiresAt());
         return ResponseEntity.noContent().build();
     }
 
@@ -69,7 +69,7 @@ public class AdminSnippetController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateSnippetPasswordRequest request
     ) {
-        snippetService.updateSnippetPassword(id, request.getNewPassword());
+        snippetService.updateSnippetPassword(id, request.newPassword());
         return ResponseEntity.noContent().build();
     }
 }

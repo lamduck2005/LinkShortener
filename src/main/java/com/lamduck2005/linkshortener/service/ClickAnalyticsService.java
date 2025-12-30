@@ -48,7 +48,7 @@ public class ClickAnalyticsService {
 
     private boolean isAdmin(User user) {
         return user.getRoles().stream()
-                .anyMatch(role -> role.getName() == ERole.ROLE_ADMIN);
+                .anyMatch(role -> role.getName().equals(ERole.ROLE_ADMIN));
     }
 
     private ClickAnalyticsResponse toResponse(ClickAnalytics analytics) {

@@ -42,8 +42,8 @@ public class AuthService {
         try {
             authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getUsername(),
-                            request.getPassword()));
+                            request.username(),
+                            request.password()));
         } catch (Exception e) {
             throw new BadCredentialsException("Tên đăng nhập hoặc mật khẩu không chính xác");
         }
@@ -61,22 +61,22 @@ public class AuthService {
     @Transactional
     public SignupResponse signup(SignupRequest request) {
 
-        String normalizedUsername = request.getUsername().toLowerCase();
+        String normalizedUsername = request.username().toLowerCase();
 
         userRepository.findByUsernameIgnoreCase(normalizedUsername)
                 .ifPresent(user -> {
                     throw new DuplicateResourceException("Username đã được sử dụng.");
                 });
 
-        userRepository.findByEmail(request.getEmail())
+        userRepository.findByEmail(request.email())
                 .ifPresent(user -> {
                     throw new DuplicateResourceException("Email đã được sử dụng.");
                 });
 
         User user = new User(
-                request.getEmail(),
+                request.email(),
                 normalizedUsername,
-                passwordEncoder.encode(request.getPassword()));
+                passwordEncoder.encode(request.password()));
         user.setIsActive(true);
 
         Role userRole = roleRepository.findByName(ERole.ROLE_USER)

@@ -3,11 +3,10 @@ package com.lamduck2005.linkshortener.service;
 import com.lamduck2005.linkshortener.config.DefaultUserInitializer;
 import com.lamduck2005.linkshortener.dto.request.ChangeEmailRequest;
 import com.lamduck2005.linkshortener.dto.request.ChangePasswordRequest;
-import com.lamduck2005.linkshortener.dto.response.UserProfileResponse;
+import com.lamduck2005.linkshortener.dto.response.UserResponse;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
-import com.lamduck2005.linkshortener.mapper.UserMapper;
 import com.lamduck2005.linkshortener.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,7 +28,6 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -72,16 +70,23 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserProfileResponse getCurrentUserProfile() {
+    public UserResponse getCurrentUserProfile() {
         User currentUser = getCurrentUser();
-
-        UserProfileResponse response = userMapper.toUserProfile(currentUser);
 
         List<String> roles = currentUser.getRoles().stream()
                 .map(Role::getName)
                 .map(Enum::name)
                 .collect(Collectors.toList());
-        response.setRoles(roles);
+
+        UserResponse response = new UserResponse(
+                currentUser.getId(),
+                currentUser.getUsername(),
+                currentUser.getEmail(),
+                currentUser.getIsActive(),
+                currentUser.getCreatedAt(),
+                currentUser.getUpdatedAt(),
+                roles
+        );
 
         return response;
     }
@@ -90,14 +95,14 @@ public class UserService {
     public void changePassword(ChangePasswordRequest request) {
         User currentUser = getCurrentUser();
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), currentUser.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.currentPassword(), currentUser.getPasswordHash())) {
             throw new BadCredentialsException("Mật khẩu hiện tại không chính xác.");
         }
 
         // Bảo vệ 2 tài khoản test: admin và user (không thể đổi password)
         DefaultUserInitializer.throwIfTestAccount(currentUser.getUsername(), "đổi mật khẩu");
 
-        currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        currentUser.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(currentUser);
     }
 
@@ -108,7 +113,7 @@ public class UserService {
         // Bảo vệ 2 tài khoản test: admin và user (không thể đổi email)
         DefaultUserInitializer.throwIfTestAccount(currentUser.getUsername(), "đổi email");
 
-        userRepository.findByEmail(request.getNewEmail())
+        userRepository.findByEmail(request.newEmail())
                 .ifPresent(user -> {
                     // Nếu email đã thuộc về user khác
                     if (!user.getId().equals(currentUser.getId())) {
@@ -116,7 +121,7 @@ public class UserService {
                     }
                 });
 
-        currentUser.setEmail(request.getNewEmail());
+        currentUser.setEmail(request.newEmail());
         userRepository.save(currentUser);
     }
 }

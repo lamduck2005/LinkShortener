@@ -1,23 +1,15 @@
 package com.lamduck2005.linkshortener.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.Instant;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class MySnippetResponse {
-
-    private Long id;
-    private String shortCode;
-    private String shortUrl;
-    private String originalContent;
-    private long clickCount;
-    private Instant createdAt;
-    private Instant expiresAt;
-    private boolean hasPassword;
-    private String contentType;
-}
+public record MySnippetResponse(
+        Long id,
+        String shortCode,
+        String shortUrl,
+        String originalContent,
+        long clickCount,
+        Instant createdAt,
+        Instant expiresAt,
+        boolean hasPassword,
+        String contentType
+) {}

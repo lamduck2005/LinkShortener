@@ -1,18 +1,15 @@
 package com.lamduck2005.linkshortener.dto.response;
 
 import com.lamduck2005.linkshortener.constant.ContentType;
-import lombok.Data;
-import java.time.Instant; // Cần import Instant
+import java.time.Instant;
 
-@Data
-public class CreateSnippetResponse {
-    private Long id;
-    private String shortCode; // Mã sau khi rút gọn
-    private String shortUrl; // Base url + shortcode
-    private String originalContent;
-    private ContentType contentType;
-    private String qrCode;
-
-    private Instant createdAt;
-    private Instant expiresAt;
-}
+public record CreateSnippetResponse(
+        Long id,
+        String shortCode,
+        String shortUrl,
+        String originalContent,
+        ContentType contentType,
+        String qrCode,
+        Instant createdAt,
+        Instant expiresAt
+) {}

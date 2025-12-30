@@ -2,7 +2,7 @@ package com.lamduck2005.linkshortener.controller;
 
 import com.lamduck2005.linkshortener.dto.request.ChangeEmailRequest;
 import com.lamduck2005.linkshortener.dto.request.ChangePasswordRequest;
-import com.lamduck2005.linkshortener.dto.response.UserProfileResponse;
+import com.lamduck2005.linkshortener.dto.response.UserResponse;
 import com.lamduck2005.linkshortener.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +17,8 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/me")
-    public ResponseEntity<UserProfileResponse> getCurrentUserProfile() {
-        UserProfileResponse response = userService.getCurrentUserProfile();
+    public ResponseEntity<UserResponse> getCurrentUserProfile() {
+        UserResponse response = userService.getCurrentUserProfile();
         return ResponseEntity.ok(response);
     }
 

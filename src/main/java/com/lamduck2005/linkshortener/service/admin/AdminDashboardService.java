@@ -76,15 +76,14 @@ public class AdminDashboardService {
 
         List<AdminDashboardTopSnippetResponse> topSnippets = loadTopSnippets(from, to);
 
-        AdminDashboardResponse response = new AdminDashboardResponse();
-        response.setTotalUsers(totalUsers);
-        response.setTotalSnippets(totalSnippets);
-        response.setTotalClicks(totalClicks);
-        response.setPeriod(period);
-        response.setPeriodStats(periodStats);
-        response.setTopSnippets(topSnippets);
-
-        return response;
+        return new AdminDashboardResponse(
+                totalUsers,
+                totalSnippets,
+                totalClicks,
+                period,
+                periodStats,
+                topSnippets
+        );
     }
 
     private List<AdminDashboardTopSnippetResponse> loadTopSnippets(Instant from, Instant to) {

@@ -4,13 +4,12 @@ import com.lamduck2005.linkshortener.config.DefaultUserInitializer;
 import com.lamduck2005.linkshortener.constant.ERole;
 import com.lamduck2005.linkshortener.dto.request.AdminCreateUserRequest;
 import com.lamduck2005.linkshortener.dto.request.AdminUpdateUserRequest;
-import com.lamduck2005.linkshortener.dto.response.AdminUserResponse;
+import com.lamduck2005.linkshortener.dto.response.UserResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
 import com.lamduck2005.linkshortener.exception.ResourceNotFoundException;
-import com.lamduck2005.linkshortener.mapper.UserMapper;
 import com.lamduck2005.linkshortener.repository.RoleRepository;
 import com.lamduck2005.linkshortener.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,24 +32,31 @@ import java.util.stream.Collectors;
 public class AdminUserService {
 
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public PagedResponse<AdminUserResponse> getAllUsers(Pageable pageable) {
+    public PagedResponse<UserResponse> getAllUsers(Pageable pageable) {
         Page<User> page = userRepository.findAll(pageable);
 
-        List<AdminUserResponse> content = page.map(user -> {
-            AdminUserResponse dto = userMapper.toAdminUser(user);
+        List<UserResponse> content = page.map(user -> {
             List<String> roles = user.getRoles().stream()
                     .map(Role::getName)
                     .map(Enum::name)
                     .collect(Collectors.toList());
-            dto.setRoles(roles);
-            return dto;
+            // Tạo record mới với tất cả fields
+            return new UserResponse(
+                    user.getId(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    user.getIsActive(),
+                    user.getCreatedAt(),
+                    user.getUpdatedAt(),
+                    roles
+            );
         }).getContent();
 
-        return new PagedResponse<>(
+        return new PagedResponse<UserResponse>(
                 content,
                 page.getNumber(),
                 page.getSize(),
@@ -59,25 +66,25 @@ public class AdminUserService {
     }
 
     @Transactional
-    public AdminUserResponse createUser(AdminCreateUserRequest request) {
-        String normalizedUsername = request.getUsername().toLowerCase();
+    public UserResponse createUser(AdminCreateUserRequest request) {
+        String normalizedUsername = request.username().toLowerCase();
 
         userRepository.findByUsernameIgnoreCase(normalizedUsername)
                 .ifPresent(user -> {
                     throw new DuplicateResourceException("Username đã được sử dụng.");
                 });
 
-        userRepository.findByEmail(request.getEmail())
+        userRepository.findByEmail(request.email())
                 .ifPresent(user -> {
                     throw new DuplicateResourceException("Email đã được sử dụng.");
                 });
 
         User user = new User(
-                request.getEmail(),
+                request.email(),
                 normalizedUsername,
-                request.getPassword() // password đã được hash trước khi lưu, nếu cần có thể encode ở layer khác
+                passwordEncoder.encode(request.password()) // Encode password trước khi lưu
         );
-        user.setIsActive(request.getIsActive() == null ? Boolean.TRUE : request.getIsActive());
+        user.setIsActive(request.isActive() == null ? Boolean.TRUE : request.isActive());
 
         Role userRole = roleRepository.findByName(ERole.ROLE_USER)
                 .orElseThrow(() -> new IllegalStateException("ROLE_USER chưa được cấu hình trong hệ thống."));
@@ -85,7 +92,7 @@ public class AdminUserService {
         Set<Role> roles = new HashSet<>();
         roles.add(userRole);
 
-        if (Boolean.TRUE.equals(request.getIsAdmin())) {
+        if (Boolean.TRUE.equals(request.isAdmin())) {
             Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                     .orElseThrow(() -> new IllegalStateException("ROLE_ADMIN chưa được cấu hình trong hệ thống."));
             roles.add(adminRole);
@@ -94,17 +101,23 @@ public class AdminUserService {
         user.setRoles(roles);
         User saved = userRepository.save(user);
 
-        AdminUserResponse dto = userMapper.toAdminUser(saved);
         List<String> roleNames = saved.getRoles().stream()
                 .map(Role::getName)
                 .map(Enum::name)
                 .collect(Collectors.toList());
-        dto.setRoles(roleNames);
-        return dto;
+        return new UserResponse(
+                saved.getId(),
+                saved.getUsername(),
+                saved.getEmail(),
+                saved.getIsActive(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt(),
+                roleNames
+        );
     }
 
     @Transactional
-    public AdminUserResponse updateUser(Long id, AdminUpdateUserRequest request) {
+    public UserResponse updateUser(Long id, AdminUpdateUserRequest request) {
         // Không cho admin tự sửa chính mình
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
@@ -130,8 +143,8 @@ public class AdminUserService {
         // Bảo vệ 2 tài khoản test: admin và user (không thể sửa bất kỳ thông tin nào)
         DefaultUserInitializer.throwIfTestAccount(user.getUsername(), "chỉnh sửa");
 
-        if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
-            String normalizedUsername = request.getUsername().toLowerCase();
+        if (request.username() != null && !request.username().equals(user.getUsername())) {
+            String normalizedUsername = request.username().toLowerCase();
             userRepository.findByUsernameIgnoreCase(normalizedUsername)
                     .ifPresent(u -> {
                         if (!u.getId().equals(user.getId())) {
@@ -141,21 +154,21 @@ public class AdminUserService {
             user.setUsername(normalizedUsername);
         }
 
-        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
-            userRepository.findByEmail(request.getEmail())
+        if (request.email() != null && !request.email().equals(user.getEmail())) {
+            userRepository.findByEmail(request.email())
                     .ifPresent(u -> {
                         if (!u.getId().equals(user.getId())) {
                             throw new DuplicateResourceException("Email đã được sử dụng.");
                         }
                     });
-            user.setEmail(request.getEmail());
+            user.setEmail(request.email());
         }
 
-        if (request.getIsActive() != null) {
-            user.setIsActive(request.getIsActive());
+        if (request.isActive() != null) {
+            user.setIsActive(request.isActive());
         }
 
-        if (request.getIsAdmin() != null) {
+        if (request.isAdmin() != null) {
             Role userRole = roleRepository.findByName(ERole.ROLE_USER)
                     .orElseThrow(() -> new IllegalStateException("ROLE_USER chưa được cấu hình trong hệ thống."));
             Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
@@ -165,7 +178,7 @@ public class AdminUserService {
             // luôn đảm bảo có ROLE_USER
             roles.add(userRole);
 
-            if (Boolean.TRUE.equals(request.getIsAdmin())) {
+            if (Boolean.TRUE.equals(request.isAdmin())) {
                 roles.add(adminRole);
             } else {
                 roles.remove(adminRole);
@@ -176,13 +189,19 @@ public class AdminUserService {
 
         User saved = userRepository.save(user);
 
-        AdminUserResponse dto = userMapper.toAdminUser(saved);
         List<String> roleNames = saved.getRoles().stream()
                 .map(Role::getName)
                 .map(Enum::name)
                 .collect(Collectors.toList());
-        dto.setRoles(roleNames);
-        return dto;
+        return new UserResponse(
+                saved.getId(),
+                saved.getUsername(),
+                saved.getEmail(),
+                saved.getIsActive(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt(),
+                roleNames
+        );
     }
 }
 

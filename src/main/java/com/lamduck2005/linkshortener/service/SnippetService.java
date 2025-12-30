@@ -10,12 +10,10 @@ import com.lamduck2005.linkshortener.entity.Snippet;
 import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
 import com.lamduck2005.linkshortener.exception.ResourceNotFoundException;
-import com.lamduck2005.linkshortener.mapper.SnippetMapper;
 import com.lamduck2005.linkshortener.repository.ClickAnalyticsRepository;
 import com.lamduck2005.linkshortener.repository.SnippetRepository;
 import com.lamduck2005.linkshortener.util.Base62Util;
 import com.lamduck2005.linkshortener.util.QrCodeUtil;
-import com.lamduck2005.linkshortener.validator.SnippetValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,13 +39,11 @@ public class SnippetService {
     private final SnippetRepository snippetRepository;
     private final ClickAnalyticsRepository clickAnalyticsRepository;
     private final Base62Util base62Util;
-    private final SnippetMapper snippetMapper;
     private final PasswordEncoder passwordEncoder;
     private final QrCodeUtil qrCodeUtil;
     private final AnalyticsService analyticsService;
     private final HttpServletRequest httpRequest;
     private final UserService userService;
-    private final SnippetValidator snippetValidator;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -142,19 +138,19 @@ public class SnippetService {
     @Transactional
     public CreateSnippetResponse createSnippet(CreateSnippetRequest request) {
         // validate & normalize content
-        String content = snippetValidator.validateContent(
-                request.getContent(),
-                request.getType(),
+        String content = validateAndNormalizeContent(
+                request.content(),
+                request.type(),
                 urlMaxLength,
                 textMaxLength
         );
 
         // Tạo snippet mới, gán lại content đã validate
-        Snippet newSnippet = snippetMapper.toEntity(request);
+        Snippet newSnippet = mapToSnippetEntity(request);
         newSnippet.setContentData(content);
 
         // Validate custom alias (nếu có)
-        String customAlias = snippetValidator.validateCustomAlias(request.getCustomAlias());
+        String customAlias = validateCustomAlias(request.customAlias());
         newSnippet.setCustomAlias(customAlias);
 
         // Nếu request có JWT (user đã login) -> gán user hiện tại cho snippet
@@ -164,8 +160,8 @@ public class SnippetService {
         }
 
         //hash pass
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            String hashedPassword = passwordEncoder.encode(request.getPassword());
+        if (request.password() != null && !request.password().isBlank()) {
+            String hashedPassword = passwordEncoder.encode(request.password());
             newSnippet.setPasswordHash(hashedPassword);
         }
 
@@ -177,16 +173,26 @@ public class SnippetService {
         }
 
         //tạo response
-        CreateSnippetResponse response = snippetMapper.toResponse(newSnippet);
-
         String displayCode = buildDisplayCode(newSnippet);
         String shortUrl = baseUrl + "/" + displayCode;
-        response.setShortCode(displayCode);
-        response.setShortUrl(shortUrl);
-        response.setQrCode(qrCodeUtil.generateQrCodeBase64(shortUrl, 250, 250));
+        String qrCode = qrCodeUtil.generateQrCodeBase64(shortUrl, 250, 250);
 
+        // Fallback nếu QR code generation thất bại
+        if (qrCode == null) {
+            qrCode = "";
+        }
 
-        return response;
+        // Tạo record mới với các field đã tính toán
+        return new CreateSnippetResponse(
+                newSnippet.getId(),
+                displayCode,
+                shortUrl,
+                newSnippet.getContentData(),
+                newSnippet.getContentType(),
+                qrCode,
+                newSnippet.getCreatedAt(),
+                newSnippet.getExpiresAt()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -292,5 +298,68 @@ public class SnippetService {
         }
         String userAgent = httpRequest.getHeader("User-Agent");
         analyticsService.logClick(snippet, ipAddress, userAgent);
+    }
+
+    // Hàm tiện ích nhỏ
+
+    private String validateAndNormalizeContent(String rawContent, ContentType type, int urlMaxLength, int textMaxLength) {
+        if (rawContent == null || rawContent.isBlank()) {
+            throw new IllegalArgumentException("Nội dung không được để trống.");
+        }
+
+        if (type == ContentType.URL) {
+            String content = rawContent.trim();
+            if (!isValidUrl(content)) {
+                throw new IllegalArgumentException("Nội dung không phải là một URL hợp lệ.");
+            }
+            if (content.length() > urlMaxLength) {
+                throw new IllegalArgumentException("URL quá dài, tối đa " + urlMaxLength + " ký tự.");
+            }
+            if (!content.startsWith("http://") && !content.startsWith("https://")) {
+                content = "http://" + content;
+            }
+            return content;
+        }
+
+        // TEXT: giữ nguyên để không mất khoảng trắng đầu/cuối
+        if (rawContent.length() > textMaxLength) {
+            throw new IllegalArgumentException("Nội dung text quá dài, tối đa " + textMaxLength + " ký tự.");
+        }
+        return rawContent;
+    }
+
+    
+    private String validateCustomAlias(String customAlias) {
+        if (customAlias == null) {
+            return null;
+        }
+        String normalized = customAlias.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (normalized.contains("~")) {
+            throw new IllegalArgumentException("Alias không được chứa ký tự '~'.");
+        }
+        if (!isValidCustomAlias(normalized)) {
+            throw new IllegalArgumentException("Alias chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới, độ dài 1-100 ký tự, không có khoảng trắng.");
+        }
+        return normalized;
+    }
+
+    private boolean isValidUrl(String url) {
+        return url.matches("^(https?://)?[\\w\\-]{1,}(\\.[\\w\\-]{1,}){1,}[\\w\\-.,@?^=%&:/~+#]*$");
+    }
+
+    private boolean isValidCustomAlias(String alias) {
+        return alias.matches("^[A-Za-z0-9_-]{1,100}$");
+    }
+
+    
+    private Snippet mapToSnippetEntity(CreateSnippetRequest request) {
+        Snippet snippet = new Snippet();
+        snippet.setContentType(request.type());
+        snippet.setCustomAlias(request.customAlias()); 
+        snippet.setExpiresAt(request.expiresAt());
+        return snippet;
     }
 }
