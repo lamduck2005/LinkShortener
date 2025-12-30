@@ -1,6 +1,6 @@
 package com.lamduck2005.linkshortener.repository;
 
-import com.lamduck2005.linkshortener.entity.ERole;
+import com.lamduck2005.linkshortener.constant.ERole;
 import com.lamduck2005.linkshortener.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

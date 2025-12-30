@@ -1,10 +1,10 @@
-package com.lamduck2005.linkshortener.controller;
+package com.lamduck2005.linkshortener.controller.admin;
 
 import com.lamduck2005.linkshortener.dto.request.AdminCreateUserRequest;
 import com.lamduck2005.linkshortener.dto.request.AdminUpdateUserRequest;
 import com.lamduck2005.linkshortener.dto.response.AdminUserResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
-import com.lamduck2005.linkshortener.service.AdminUserService;
+import com.lamduck2005.linkshortener.service.admin.AdminUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/users")
 public class AdminUserController {
 
-    private final AdminUserService adminUserService;
+    private final AdminUserService userService;
 
     @GetMapping
     public ResponseEntity<PagedResponse<AdminUserResponse>> getAllUsers(
@@ -34,13 +34,13 @@ public class AdminUserController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        PagedResponse<AdminUserResponse> response = adminUserService.getAllUsers(pageable);
+        PagedResponse<AdminUserResponse> response = userService.getAllUsers(pageable);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping
     public ResponseEntity<AdminUserResponse> createUser(@Valid @RequestBody AdminCreateUserRequest request) {
-        AdminUserResponse created = adminUserService.createUser(request);
+        AdminUserResponse created = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -49,9 +49,8 @@ public class AdminUserController {
             @PathVariable Long id,
             @Valid @RequestBody AdminUpdateUserRequest request
     ) {
-        AdminUserResponse updated = adminUserService.updateUser(id, request);
+        AdminUserResponse updated = userService.updateUser(id, request);
         return ResponseEntity.ok(updated);
     }
 }
-
 

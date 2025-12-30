@@ -1,4 +1,4 @@
-package com.lamduck2005.linkshortener.service.impl;
+package com.lamduck2005.linkshortener.service.admin;
 
 import com.lamduck2005.linkshortener.dto.response.AdminDashboardPeriod;
 import com.lamduck2005.linkshortener.dto.response.AdminDashboardPeriodStats;
@@ -9,8 +9,7 @@ import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.repository.ClickAnalyticsRepository;
 import com.lamduck2005.linkshortener.repository.SnippetRepository;
 import com.lamduck2005.linkshortener.repository.UserRepository;
-import com.lamduck2005.linkshortener.service.AdminDashboardService;
-import com.lamduck2005.linkshortener.service.Base62Service;
+import com.lamduck2005.linkshortener.util.Base62Util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -25,12 +24,12 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AdminDashboardServiceImpl implements AdminDashboardService {
+public class AdminDashboardService {
 
     private final UserRepository userRepository;
     private final SnippetRepository snippetRepository;
     private final ClickAnalyticsRepository clickAnalyticsRepository;
-    private final Base62Service base62Service;
+    private final Base62Util base62Util;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -38,7 +37,6 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     @Value("${app.shortcode.prefix:~}")
     private String shortCodePrefix;
 
-    @Override
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboard(Integer days) {
         long totalUsers = userRepository.count();
@@ -131,8 +129,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (snippet.getCustomAlias() != null && !snippet.getCustomAlias().isBlank()) {
             return snippet.getCustomAlias();
         }
-        return shortCodePrefix + base62Service.encode(snippet.getId());
+        return shortCodePrefix + base62Util.encode(snippet.getId());
     }
 }
-
 

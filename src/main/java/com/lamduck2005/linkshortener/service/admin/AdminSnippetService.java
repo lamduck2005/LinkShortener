@@ -1,14 +1,13 @@
-package com.lamduck2005.linkshortener.service.impl;
+package com.lamduck2005.linkshortener.service.admin;
 
 import com.lamduck2005.linkshortener.dto.response.AdminSnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.entity.Snippet;
 import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.exception.ResourceNotFoundException;
-import com.lamduck2005.linkshortener.service.Base62Service;
 import com.lamduck2005.linkshortener.repository.ClickAnalyticsRepository;
 import com.lamduck2005.linkshortener.repository.SnippetRepository;
-import com.lamduck2005.linkshortener.service.AdminSnippetService;
+import com.lamduck2005.linkshortener.util.Base62Util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -22,12 +21,12 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
-public class AdminSnippetServiceImpl implements AdminSnippetService {
+public class AdminSnippetService {
 
     private final SnippetRepository snippetRepository;
     private final ClickAnalyticsRepository clickAnalyticsRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Base62Service base62Service;
+    private final Base62Util base62Util;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -35,7 +34,6 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
     @Value("${app.shortcode.prefix:~}")
     private String shortCodePrefix;
 
-    @Override
     @Transactional(readOnly = true)
     public PagedResponse<AdminSnippetResponse> getSnippets(
             Pageable pageable,
@@ -61,7 +59,7 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
                 base62Part = code.substring(shortCodePrefix.length());
             }
             try {
-                long decodedId = base62Service.decode(base62Part);
+                long decodedId = base62Util.decode(base62Part);
                 Specification<Snippet> idSpec = (root, query, cb) -> cb.equal(root.get("id"), decodedId);
                 codeSpec = codeSpec.or(idSpec);
             } catch (Exception ignored) {
@@ -106,7 +104,6 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
         return mapToPagedResponse(page);
     }
 
-    @Override
     @Transactional(readOnly = true)
     public AdminSnippetResponse getSnippet(Long id) {
         Snippet snippet = snippetRepository.findById(id)
@@ -115,7 +112,6 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
         return mapToAdminSnippetResponse(snippet);
     }
 
-    @Override
     @Transactional
     public void deleteSnippet(Long id) {
         Snippet snippet = snippetRepository.findById(id)
@@ -124,7 +120,6 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
         snippetRepository.delete(snippet);
     }
 
-    @Override
     @Transactional
     public void updateSnippetExpiry(Long id, Instant newExpiresAt) {
         Snippet snippet = snippetRepository.findById(id)
@@ -134,7 +129,6 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
         snippetRepository.save(snippet);
     }
 
-    @Override
     @Transactional
     public void updateSnippetPassword(Long id, String newPassword) {
         Snippet snippet = snippetRepository.findById(id)
@@ -198,8 +192,7 @@ public class AdminSnippetServiceImpl implements AdminSnippetService {
         if (snippet.getCustomAlias() != null && !snippet.getCustomAlias().isBlank()) {
             return snippet.getCustomAlias();
         }
-        return shortCodePrefix + base62Service.encode(snippet.getId());
+        return shortCodePrefix + base62Util.encode(snippet.getId());
     }
 }
-
 

@@ -1,4 +1,4 @@
-package com.lamduck2005.linkshortener.config.security;
+package com.lamduck2005.linkshortener.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lamduck2005.linkshortener.dto.response.ErrorResponse;
@@ -47,5 +47,4 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         objectMapper.writeValue(response.getOutputStream(), errorResponse);
     }
 }
-
 

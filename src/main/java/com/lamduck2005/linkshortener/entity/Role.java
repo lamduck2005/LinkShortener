@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.entity;
 
+import com.lamduck2005.linkshortener.constant.ERole;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

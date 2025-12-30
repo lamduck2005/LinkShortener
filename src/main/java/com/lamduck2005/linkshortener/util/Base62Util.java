@@ -1,10 +1,9 @@
-package com.lamduck2005.linkshortener.service.impl;
+package com.lamduck2005.linkshortener.util;
 
-import com.lamduck2005.linkshortener.service.Base62Service;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
-public class Base62ServiceImpl implements Base62Service {
+@Component
+public class Base62Util {
 
     // 62 ký tự: 0-9 (10), a-z (26), A-Z (26)
     private static final String BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -13,7 +12,6 @@ public class Base62ServiceImpl implements Base62Service {
     /**
      * Mã hóa ID số thành chuỗi Base62.
      */
-    @Override
     public String encode(long number) {
         if (number == 0) {
             return String.valueOf(BASE62_CHARS.charAt(0));
@@ -32,7 +30,6 @@ public class Base62ServiceImpl implements Base62Service {
     /**
      * Giải mã chuỗi Base62 thành ID số.
      */
-    @Override
     public long decode(String base62String) {
         long number = 0;
         // Thuật toán: Nhân với cơ số 62 và cộng dồn
@@ -42,3 +39,4 @@ public class Base62ServiceImpl implements Base62Service {
         return number;
     }
 }
+

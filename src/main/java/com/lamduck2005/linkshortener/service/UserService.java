@@ -1,27 +1,122 @@
 package com.lamduck2005.linkshortener.service;
 
+import com.lamduck2005.linkshortener.config.DefaultUserInitializer;
 import com.lamduck2005.linkshortener.dto.request.ChangeEmailRequest;
 import com.lamduck2005.linkshortener.dto.request.ChangePasswordRequest;
 import com.lamduck2005.linkshortener.dto.response.UserProfileResponse;
+import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
+import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
+import com.lamduck2005.linkshortener.mapper.UserMapper;
+import com.lamduck2005.linkshortener.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-public interface UserService {
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Lấy User hiện tại từ SecurityContext.
      * Nếu chưa đăng nhập hoặc anonymous -> ném AccessDeniedException.
      */
-    User getCurrentUser();
+    @Transactional(readOnly = true)
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
+            throw new InsufficientAuthenticationException("Bạn chưa đăng nhập hoặc phiên không hợp lệ.");
+        }
+
+        String username;
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserDetails userDetails) {
+            username = userDetails.getUsername();
+        } else if (principal instanceof String s) {
+            username = s;
+        } else {
+            throw new AccessDeniedException("Không thể xác định tài khoản hiện tại.");
+        }
+
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        return userOpt.orElseThrow(() ->
+                new AccessDeniedException("Tài khoản không tồn tại hoặc đã bị khóa."));
+    }
 
     /**
      * Phiên bản an toàn cho các API public (cho phép khách vãng lai).
      * Nếu chưa đăng nhập -> trả về null.
      */
-    User getCurrentUserOrNull();
+    @Transactional(readOnly = true)
+    public User getCurrentUserOrNull() {
+        try {
+            return getCurrentUser();
+        } catch (InsufficientAuthenticationException | AccessDeniedException ex) {
+            return null;
+        }
+    }
 
-    UserProfileResponse getCurrentUserProfile();
+    @Transactional(readOnly = true)
+    public UserProfileResponse getCurrentUserProfile() {
+        User currentUser = getCurrentUser();
 
-    void changePassword(ChangePasswordRequest request);
+        UserProfileResponse response = userMapper.toUserProfile(currentUser);
 
-    void changeEmail(ChangeEmailRequest request);
+        List<String> roles = currentUser.getRoles().stream()
+                .map(Role::getName)
+                .map(Enum::name)
+                .collect(Collectors.toList());
+        response.setRoles(roles);
+
+        return response;
+    }
+
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User currentUser = getCurrentUser();
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), currentUser.getPasswordHash())) {
+            throw new BadCredentialsException("Mật khẩu hiện tại không chính xác.");
+        }
+
+        // Bảo vệ 2 tài khoản test: admin và user (không thể đổi password)
+        DefaultUserInitializer.throwIfTestAccount(currentUser.getUsername(), "đổi mật khẩu");
+
+        currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(currentUser);
+    }
+
+    @Transactional
+    public void changeEmail(ChangeEmailRequest request) {
+        User currentUser = getCurrentUser();
+
+        // Bảo vệ 2 tài khoản test: admin và user (không thể đổi email)
+        DefaultUserInitializer.throwIfTestAccount(currentUser.getUsername(), "đổi email");
+
+        userRepository.findByEmail(request.getNewEmail())
+                .ifPresent(user -> {
+                    // Nếu email đã thuộc về user khác
+                    if (!user.getId().equals(currentUser.getId())) {
+                        throw new DuplicateResourceException("Email đã được sử dụng.");
+                    }
+                });
+
+        currentUser.setEmail(request.getNewEmail());
+        userRepository.save(currentUser);
+    }
 }

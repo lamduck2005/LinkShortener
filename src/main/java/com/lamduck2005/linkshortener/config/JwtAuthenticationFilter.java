@@ -1,7 +1,6 @@
-package com.lamduck2005.linkshortener.config.jwt;
+package com.lamduck2005.linkshortener.config;
 
-import com.lamduck2005.linkshortener.service.impl.UserDetailsServiceImpl;
-
+import com.lamduck2005.linkshortener.service.UserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,18 +18,18 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-public class AuthTokenFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtUtils jwtUtils;
-    private final UserDetailsServiceImpl userDetailsService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
+            if (jwt != null && jwtTokenProvider.validateJwtToken(jwt)) {
+                String username = jwtTokenProvider.getUserNameFromJwtToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 
@@ -59,3 +58,4 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         return null;
     }
 }
+

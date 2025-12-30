@@ -1,11 +1,11 @@
-package com.lamduck2005.linkshortener.service.impl;
+package com.lamduck2005.linkshortener.service.admin;
 
 import com.lamduck2005.linkshortener.config.DefaultUserInitializer;
+import com.lamduck2005.linkshortener.constant.ERole;
 import com.lamduck2005.linkshortener.dto.request.AdminCreateUserRequest;
 import com.lamduck2005.linkshortener.dto.request.AdminUpdateUserRequest;
 import com.lamduck2005.linkshortener.dto.response.AdminUserResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
-import com.lamduck2005.linkshortener.entity.ERole;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.exception.DuplicateResourceException;
@@ -13,7 +13,6 @@ import com.lamduck2005.linkshortener.exception.ResourceNotFoundException;
 import com.lamduck2005.linkshortener.mapper.UserMapper;
 import com.lamduck2005.linkshortener.repository.RoleRepository;
 import com.lamduck2005.linkshortener.repository.UserRepository;
-import com.lamduck2005.linkshortener.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,13 +29,12 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AdminUserServiceImpl implements AdminUserService {
+public class AdminUserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
 
-    @Override
     @Transactional(readOnly = true)
     public PagedResponse<AdminUserResponse> getAllUsers(Pageable pageable) {
         Page<User> page = userRepository.findAll(pageable);
@@ -60,7 +58,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         );
     }
 
-    @Override
     @Transactional
     public AdminUserResponse createUser(AdminCreateUserRequest request) {
         String normalizedUsername = request.getUsername().toLowerCase();
@@ -106,7 +103,6 @@ public class AdminUserServiceImpl implements AdminUserService {
         return dto;
     }
 
-    @Override
     @Transactional
     public AdminUserResponse updateUser(Long id, AdminUpdateUserRequest request) {
         // Không cho admin tự sửa chính mình
@@ -189,5 +185,4 @@ public class AdminUserServiceImpl implements AdminUserService {
         return dto;
     }
 }
-
 

@@ -1,21 +1,26 @@
-package com.lamduck2005.linkshortener.service.impl;
+package com.lamduck2005.linkshortener.util;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import com.lamduck2005.linkshortener.service.QrCodeService;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 
-@Service
-public class QrCodeServiceImpl implements QrCodeService {
+@Component
+public class QrCodeUtil {
 
-    @Override
+    /**
+     * Tạo mã QR từ một đoạn text (URL) và trả về dưới dạng Base64.
+     * @param text Nội dung (ví dụ: http://localhost:8080/gT)
+     * @param width Chiều rộng
+     * @param height Chiều cao
+     * @return Chuỗi Base64 (ví dụ: "data:image/png;base64,iVBORw0KG...")
+     */
     public String generateQrCodeBase64(String text, int width, int height) {
         try {
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
@@ -40,3 +45,4 @@ public class QrCodeServiceImpl implements QrCodeService {
         }
     }
 }
+

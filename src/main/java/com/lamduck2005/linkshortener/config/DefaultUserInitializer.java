@@ -1,6 +1,6 @@
 package com.lamduck2005.linkshortener.config;
 
-import com.lamduck2005.linkshortener.entity.ERole;
+import com.lamduck2005.linkshortener.constant.ERole;
 import com.lamduck2005.linkshortener.entity.Role;
 import com.lamduck2005.linkshortener.entity.User;
 import com.lamduck2005.linkshortener.repository.RoleRepository;
@@ -19,7 +19,7 @@ import java.util.Set;
  * - admin / 123456 (ROLE_ADMIN + ROLE_USER)
  * - user / 123456 (ROLE_USER)
  *
- * 2 tài khoản này không thể chỉnh sửa bất kỳ thông tin nào (bảo vệ trong AdminUserServiceImpl)
+ * 2 tài khoản này không thể chỉnh sửa bất kỳ thông tin nào (bảo vệ trong admin.UserService)
  */
 @Component
 @RequiredArgsConstructor

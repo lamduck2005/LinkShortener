@@ -1,6 +1,6 @@
 package com.lamduck2005.linkshortener.validator;
 
-import com.lamduck2005.linkshortener.entity.ContentType;
+import com.lamduck2005.linkshortener.constant.ContentType;
 import org.springframework.stereotype.Component;
 
 import java.util.regex.Pattern;

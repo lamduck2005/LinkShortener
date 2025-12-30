@@ -1,7 +1,7 @@
-package com.lamduck2005.linkshortener.controller;
+package com.lamduck2005.linkshortener.controller.admin;
 
 import com.lamduck2005.linkshortener.dto.response.AdminDashboardResponse;
-import com.lamduck2005.linkshortener.service.AdminDashboardService;
+import com.lamduck2005.linkshortener.service.admin.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,15 +12,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin")
-public class AdminController {
+public class AdminDashboardController {
 
-    private final AdminDashboardService adminDashboardService;
+    private final AdminDashboardService dashboardService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<AdminDashboardResponse> getDashboard(
             @RequestParam(required = false) Integer days
     ) {
-        AdminDashboardResponse response = adminDashboardService.getDashboard(days);
+        AdminDashboardResponse response = dashboardService.getDashboard(days);
         return ResponseEntity.ok(response);
     }
 }
+

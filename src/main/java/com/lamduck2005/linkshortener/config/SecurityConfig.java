@@ -1,9 +1,6 @@
 package com.lamduck2005.linkshortener.config;
 
-import com.lamduck2005.linkshortener.config.jwt.AuthTokenFilter;
-import com.lamduck2005.linkshortener.config.security.RestAccessDeniedHandler;
-import com.lamduck2005.linkshortener.config.security.RestAuthenticationEntryPoint;
-import com.lamduck2005.linkshortener.service.impl.UserDetailsServiceImpl;
+import com.lamduck2005.linkshortener.service.UserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,8 +24,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final UserDetailsServiceImpl userDetailsService;
-    private final AuthTokenFilter authTokenFilter;
+    private final UserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
 
@@ -80,7 +77,7 @@ public class SecurityConfig {
                         // Các endpoint còn lại cần đăng nhập
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -1,4 +1,4 @@
-package com.lamduck2005.linkshortener.config.jwt;
+package com.lamduck2005.linkshortener.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-public class JwtUtils {
+public class JwtTokenProvider {
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
@@ -80,3 +80,4 @@ public class JwtUtils {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 }
+

@@ -1,6 +1,6 @@
 package com.lamduck2005.linkshortener.dto.response;
 
-import com.lamduck2005.linkshortener.entity.ContentType;
+import com.lamduck2005.linkshortener.constant.ContentType;
 import lombok.Data;
 import java.time.Instant; // Cần import Instant
 

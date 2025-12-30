@@ -1,10 +1,10 @@
-package com.lamduck2005.linkshortener.controller;
+package com.lamduck2005.linkshortener.controller.admin;
 
 import com.lamduck2005.linkshortener.dto.request.UpdateSnippetExpiryRequest;
 import com.lamduck2005.linkshortener.dto.request.UpdateSnippetPasswordRequest;
 import com.lamduck2005.linkshortener.dto.response.AdminSnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
-import com.lamduck2005.linkshortener.service.AdminSnippetService;
+import com.lamduck2005.linkshortener.service.admin.AdminSnippetService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/snippets")
 public class AdminSnippetController {
 
-    private final AdminSnippetService adminSnippetService;
+    private final AdminSnippetService snippetService;
 
     @GetMapping
     public ResponseEntity<PagedResponse<AdminSnippetResponse>> getSnippets(
@@ -39,19 +39,19 @@ public class AdminSnippetController {
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         PagedResponse<AdminSnippetResponse> response =
-                adminSnippetService.getSnippets(pageable, userId, shortCode, hasPassword, expired);
+                snippetService.getSnippets(pageable, userId, shortCode, hasPassword, expired);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AdminSnippetResponse> getSnippet(@PathVariable Long id) {
-        AdminSnippetResponse response = adminSnippetService.getSnippet(id);
+        AdminSnippetResponse response = snippetService.getSnippet(id);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSnippet(@PathVariable Long id) {
-        adminSnippetService.deleteSnippet(id);
+        snippetService.deleteSnippet(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -60,7 +60,7 @@ public class AdminSnippetController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateSnippetExpiryRequest request
     ) {
-        adminSnippetService.updateSnippetExpiry(id, request.getNewExpiresAt());
+        snippetService.updateSnippetExpiry(id, request.getNewExpiresAt());
         return ResponseEntity.noContent().build();
     }
 
@@ -69,9 +69,8 @@ public class AdminSnippetController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateSnippetPasswordRequest request
     ) {
-        adminSnippetService.updateSnippetPassword(id, request.getNewPassword());
+        snippetService.updateSnippetPassword(id, request.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 }
-
 
