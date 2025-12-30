@@ -4,10 +4,12 @@ import com.lamduck2005.linkshortener.dto.request.CreateSnippetRequest;
 import com.lamduck2005.linkshortener.dto.request.UnlockSnippetRequest;
 import com.lamduck2005.linkshortener.dto.request.UpdateSnippetExpiryRequest;
 import com.lamduck2005.linkshortener.dto.request.UpdateSnippetPasswordRequest;
+import com.lamduck2005.linkshortener.dto.response.ClickAnalyticsResponse;
 import com.lamduck2005.linkshortener.dto.response.CreateSnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.MySnippetResponse;
 import com.lamduck2005.linkshortener.dto.response.PagedResponse;
 import com.lamduck2005.linkshortener.dto.response.SnippetContentResponse;
+import com.lamduck2005.linkshortener.service.ClickAnalyticsService;
 import com.lamduck2005.linkshortener.service.SnippetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +20,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/snippets")
 public class SnippetController {
 
     private final SnippetService snippetService;
+    private final ClickAnalyticsService clickAnalyticsService;
 
     @PostMapping
     public ResponseEntity<CreateSnippetResponse> createSnippet(@Valid @RequestBody CreateSnippetRequest request) {
@@ -73,6 +78,14 @@ public class SnippetController {
     ) {
         snippetService.updateSnippetExpiry(id, request.getNewExpiresAt());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/clicks")
+    public ResponseEntity<List<ClickAnalyticsResponse>> getSnippetClicks(
+            @PathVariable Long id
+    ) {
+        List<ClickAnalyticsResponse> clicks = clickAnalyticsService.getAllClicksBySnippetId(id);
+        return ResponseEntity.ok(clicks);
     }
 
     @PostMapping("/{shortCode}/unlock")

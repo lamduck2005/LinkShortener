@@ -18,6 +18,8 @@ public interface ClickAnalyticsRepository extends JpaRepository<ClickAnalytics, 
 
     long countByClickTimeBetween(Instant from, Instant to);
 
+    List<ClickAnalytics> findBySnippetIdOrderByClickTimeDesc(Long snippetId);
+
     /**
      * Top snippet theo tổng số click (toàn bộ lịch sử).
      */
