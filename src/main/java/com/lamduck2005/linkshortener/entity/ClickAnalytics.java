@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,7 @@ public class ClickAnalytics {
     // Mối quan hệ Nhiều-Một với Snippet (Click này thuộc về Snippet nào)
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // Bắt buộc phải có snippet_id
     @JoinColumn(name = "snippet_id", nullable = false)
+    @JsonIgnore
     private Snippet snippet;
 
     @CreationTimestamp

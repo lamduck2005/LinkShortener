@@ -17,13 +17,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,12 +51,15 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtTokenProvider.generateJwtToken(authentication);
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(auth -> auth.getAuthority())
+        User user = userRepository.findByUsernameIgnoreCase(request.username())
+                .orElseThrow(() -> new BadCredentialsException("Không tìm thấy user"));
+
+        List<String> roles = user.getRoles().stream()
+                .map(Role::getName)
+                .map(Enum::name)
                 .collect(Collectors.toList());
 
-        return new JwtResponse(jwt, "Bearer", userDetails.getUsername(), roles);
+        return new JwtResponse(jwt, user.getId(), user.getEmail(), user.getUsername(), roles);
     }
 
     @Transactional
@@ -87,5 +91,42 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         return new SignupResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail());
+    }
+
+    @Transactional
+    public JwtResponse handleOAuth2Login(String email, OAuth2User oauth2User) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseGet(() -> {
+                    String emailPrefix = extractUsernameFromEmail(email);
+                    long timestamp = System.currentTimeMillis();
+                    int random = new Random().nextInt(1000, 9999);
+                    String username = emailPrefix + timestamp + random;
+
+                    User newUser = new User(
+                            email,
+                            username.toLowerCase(),
+                            passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                    newUser.setIsActive(true);
+
+                    Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "ROLE_USER chưa được cấu hình trong hệ thống."));
+
+                    newUser.setRoles(Collections.singleton(userRole));
+                    return userRepository.save(newUser);
+                });
+
+        List<String> roles = user.getRoles().stream()
+                .map(Role::getName)
+                .map(Enum::name)
+                .collect(Collectors.toList());
+
+        String jwt = jwtTokenProvider.generateJwtToken(user.getUsername(), roles);
+
+        return new JwtResponse(jwt, user.getId(), user.getEmail(), user.getUsername(), roles);
+    }
+
+    private String extractUsernameFromEmail(String email) {
+        return email.split("@")[0].toLowerCase().replaceAll("[^a-z0-9]", "");
     }
 }

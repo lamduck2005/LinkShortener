@@ -19,7 +19,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = "roles")
     Optional<User> findByUsernameIgnoreCase(String username);
 
+    @EntityGraph(attributePaths = "roles")
     Optional<User> findByEmail(String email);
+
+    @EntityGraph(attributePaths = "roles")
+    Optional<User> findByEmailIgnoreCase(String email);
 
     long countByCreatedAtBetween(Instant from, Instant to);
 

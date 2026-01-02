@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.lamduck2005.linkshortener.constant.ContentType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -45,11 +46,13 @@ public class Snippet {
     // Mối quan hệ Nhiều-Một với User (Snippet này thuộc về User nào)
     @ManyToOne(fetch = FetchType.LAZY) // LAZY là tốt nhất
     @JoinColumn(name = "user_id") // Tên cột khóa ngoại trong bảng snippets
+    @JsonIgnore
     private User user;
 
     // Mối quan hệ Một-Nhiều với ClickAnalytics (để lấy lịch sử click của snippet này)
     // 'mappedBy' trỏ đến tên trường 'snippet' trong class ClickAnalytics
     @OneToMany(mappedBy = "snippet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<ClickAnalytics> clicks = new HashSet<>();
 
 

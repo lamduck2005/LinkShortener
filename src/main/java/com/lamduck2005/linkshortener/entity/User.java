@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,11 +50,13 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @JsonIgnore
     private Set<Role> roles = new HashSet<>();
 
     // Mối quan hệ Một-Nhiều với Snippet (để lấy các snippet của user này)
     // 'mappedBy' trỏ đến tên trường 'user' trong class Snippet
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Snippet> snippets = new HashSet<>();
 
     public User(String email, String username, String passwordHash) {

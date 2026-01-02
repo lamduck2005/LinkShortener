@@ -13,17 +13,10 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-
-        // Cấu hình CORS cho các API
         registry.addMapping("/**")
-
-                // Cho phép domain frontend (Vue) của bạn gọi đến
                 .allowedOrigins(frontendUrl)
-
-                // Cho phép các phương thức này
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-
-                // Cho phép tất cả các header
-                .allowedHeaders("*");
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }

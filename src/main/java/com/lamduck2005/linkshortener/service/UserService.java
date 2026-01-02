@@ -51,7 +51,7 @@ public class UserService {
             throw new AccessDeniedException("Không thể xác định tài khoản hiện tại.");
         }
 
-        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
         return userOpt.orElseThrow(() ->
                 new AccessDeniedException("Tài khoản không tồn tại hoặc đã bị khóa."));
     }

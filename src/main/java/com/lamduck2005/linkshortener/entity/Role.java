@@ -1,5 +1,6 @@
 package com.lamduck2005.linkshortener.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.lamduck2005.linkshortener.constant.ERole;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -27,6 +28,7 @@ public class Role {
     // Thêm mối quan hệ ngược lại với User (không bắt buộc, nhưng tiện để truy vấn)
     // 'mappedBy' trỏ đến tên trường 'roles' trong class User
     @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<User> users = new HashSet<>();
 
     public Role(ERole name) {

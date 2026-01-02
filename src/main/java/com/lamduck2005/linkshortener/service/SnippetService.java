@@ -44,6 +44,7 @@ public class SnippetService {
     private final AnalyticsService analyticsService;
     private final HttpServletRequest httpRequest;
     private final UserService userService;
+    private final RedisService redisService;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -63,19 +64,24 @@ public class SnippetService {
     @Transactional
     public SnippetContentResponse getSnippetContent(String shortCode, String rawPassword) {
 
-        Optional<Snippet> snippetOptional = resolveSnippetByCode(shortCode);
-        if (snippetOptional.isEmpty()) {
-            return new SnippetContentResponse(SnippetContentResponse.Status.NOT_FOUND, null, null);
+        Snippet snippet = redisService.getCachedSnippet(shortCode); //get cache
+        if(snippet == null){
+            Optional<Snippet> snippetOptional = resolveSnippetByCode(shortCode); //decode -> find in DB
+            if (snippetOptional.isEmpty()) {
+                return new SnippetContentResponse(SnippetContentResponse.Status.NOT_FOUND, null, null);
+            }
+            snippet = snippetOptional.get();
+            redisService.cacheSnippet(shortCode, snippet);
         }
 
-        Snippet snippet = snippetOptional.get();
 
-        // 2. Kiểm tra Hết hạn
+        // check expired
         if (snippet.getExpiresAt() != null && Instant.now().isAfter(snippet.getExpiresAt())) {
+            redisService.invalidateSnippetCache(shortCode);
             return new SnippetContentResponse(SnippetContentResponse.Status.EXPIRED, null, null);
         }
 
-        // 3. Kiểm tra Mật khẩu
+        // check password
         boolean hasPassword = snippet.getPasswordHash() != null && !snippet.getPasswordHash().isBlank();
 
         if (hasPassword) {
@@ -168,6 +174,7 @@ public class SnippetService {
         // lưu (chỉ 1 query), customAlias đã unique ở DB
         try {
             newSnippet = snippetRepository.save(newSnippet);
+            redisService.cacheSnippet(buildDisplayCode(newSnippet), newSnippet);
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateResourceException("Alias đã được sử dụng.");
         }
@@ -232,6 +239,7 @@ public class SnippetService {
     public void deleteMySnippet(Long id) {
         Snippet snippet = validateSnippetOwnership(id, "Bạn không có quyền xóa snippet của người khác.");
         snippetRepository.delete(snippet);
+        redisService.invalidateSnippetCache(buildDisplayCode(snippet));
     }
 
     @Transactional
@@ -245,6 +253,7 @@ public class SnippetService {
         }
 
         snippetRepository.save(snippet);
+        redisService.invalidateSnippetCache(buildDisplayCode(snippet));
     }
 
     @Transactional
@@ -253,6 +262,8 @@ public class SnippetService {
 
         snippet.setExpiresAt(newExpiresAt);
         snippetRepository.save(snippet);
+        redisService.invalidateSnippetCache(buildDisplayCode(snippet));
+        redisService.cacheSnippet(buildDisplayCode(snippet), snippet);
     }
 
     private Snippet validateSnippetOwnership(Long snippetId, String errorMessage) {

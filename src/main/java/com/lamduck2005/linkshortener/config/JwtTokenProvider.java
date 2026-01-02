@@ -28,14 +28,17 @@ public class JwtTokenProvider {
     public String generateJwtToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
 
-        // Lấy roles từ authorities
         List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
+        return generateJwtToken(userPrincipal.getUsername(), roles);
+    }
+
+    public String generateJwtToken(String email, List<String> roles) {
         return Jwts.builder()
-                .setSubject(userPrincipal.getUsername())
-                .claim("roles", roles) // Thêm roles vào JWT claims
+                .setSubject(email)
+                .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key(), SignatureAlgorithm.HS256)

@@ -22,13 +22,12 @@ public class UserDetailsService implements org.springframework.security.core.use
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Cho phép đăng nhập không phân biệt hoa/thường
         User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy user: " + username));
 
         List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
-                .map(Role::getName)       // ERole
-                .map(Enum::name)          // \"ROLE_USER\"
+                .map(Role::getName)
+                .map(Enum::name)
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
 
